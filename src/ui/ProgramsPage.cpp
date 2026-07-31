@@ -532,11 +532,9 @@ void ProgramsPage::editorDeleteEvent(lv_event_t* event)
 
 void ProgramsPage::editorStartNowEvent(lv_event_t* event)
 {
-    if (lv_event_get_code(event) != LV_EVENT_CLICKED)
-    {
-        return;
-    }
-
+    // createTextButton() meldet bewusst LV_EVENT_SHORT_CLICKED, damit
+    // Scrollbewegungen keinen Tastendruck ausloesen. Daher darf hier
+    // nicht auf LV_EVENT_CLICKED gefiltert werden.
     auto* page = static_cast<ProgramsPage*>(lv_event_get_user_data(event));
     if (page == nullptr || page->scheduler_ == nullptr || page->runtimeManager_ == nullptr)
     {
