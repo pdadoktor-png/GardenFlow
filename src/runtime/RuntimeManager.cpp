@@ -3,9 +3,11 @@
 #include "hardware/ValveManager.h"
 #include "time/TimeManager.h"
 #include "weather/WeatherManager.h"
+#include "smart/SmartControlManager.h"
 
 void RuntimeManager::begin(Scheduler& s, ValveManager& v, TimeManager& t){scheduler_=&s;valveManager_=&v;timeManager_=&t;clearState();Serial.println("RuntimeManager initialisiert");}
 void RuntimeManager::setWeatherManager(WeatherManager& weatherManager){weatherManager_=&weatherManager;}
+void RuntimeManager::setSmartControlManager(SmartControlManager& smartControlManager){smartControlManager_=&smartControlManager;}
 void RuntimeManager::update(){
     checkAutomaticStart();
     if(!isRunning()) return;
@@ -17,12 +19,18 @@ void RuntimeManager::checkAutomaticStart(){
     if(isRunning()||!timeManager_||!timeManager_->isValid()) return;
     if(weatherManager_ && weatherManager_->automaticPauseActive()) return;
     struct tm t={}; if(!timeManager_->getLocalTime(t)) return;
+    if(smartControlManager_ && !smartControlManager_->automaticRunAllowed(t)) return;
     const int32_t dayKey=(t.tm_year+1900)*1000+t.tm_yday; const int16_t minute=t.tm_hour*60+t.tm_min;
     if(dayKey==lastCheckedDayKey_ && minute==lastCheckedMinute_) return;
     lastCheckedDayKey_=dayKey; lastCheckedMinute_=minute;
     const uint8_t wd=timeManager_->weekdayMondayZero();
     for(uint8_t i=0;i<Scheduler::MAX_PROGRAMS;++i){
-        if(!scheduler_->isProgramUsed(i)) continue; const auto&p=scheduler_->program(i);
+        if(!scheduler_->isProgramUsed(i)) 
+        {
+            continue;
+        } 
+        const auto&p=scheduler_->program(i);
+        
         if(!p.enabled || !(p.weekdays&(1U<<wd)) || p.startHour!=t.tm_hour || p.startMinute!=t.tm_min) continue;
         if(lastStartedProgramId_==p.id && lastStartedDayKey_==dayKey && lastStartedMinute_==minute) continue;
         if(startProgram(i,true)){lastStartedProgramId_=p.id;lastStartedDayKey_=dayKey;lastStartedMinute_=minute;} break;
@@ -31,8 +39,28 @@ void RuntimeManager::checkAutomaticStart(){
 bool RuntimeManager::startProgram(uint8_t i,bool automatic){
     if(!scheduler_||!valveManager_||isRunning()||!scheduler_->isProgramUsed(i)||!allValvesIdleAndClosed()) return false;
     const auto&p=scheduler_->program(i); if(p.valveIndex>=Scheduler::VALVE_COUNT||p.durationSeconds==0||!valveManager_->pulse(p.valveIndex)) return false;
-    runningProgramIndex_=i;startedAtMs_=millis();durationSeconds_=p.durationSeconds;valveIndex_=p.valveIndex;automaticRun_=automatic;
-    Serial.printf("Programm %lu %s gestartet: Ventil %u, %lu Sekunden\n",(unsigned long)p.id,automatic?"automatisch":"manuell",p.valveIndex+1,(unsigned long)p.durationSeconds);return true;
+    uint32_t effectiveDuration=p.durationSeconds;
+    if (automatic && smartControlManager_ && timeManager_)
+    {
+        struct tm local = {};
+
+        if (timeManager_->getLocalTime(local))
+        {
+            effectiveDuration = static_cast<uint32_t>(
+                (
+                    static_cast<uint64_t>(effectiveDuration) *
+                    smartControlManager_->automaticDurationPercent(local)
+                ) / 100ULL
+            );
+
+            if (effectiveDuration < 60U)
+            {
+                effectiveDuration = 60U;
+            }
+        }
+    }
+    runningProgramIndex_=i;startedAtMs_=millis();durationSeconds_=effectiveDuration;valveIndex_=p.valveIndex;automaticRun_=automatic;
+    Serial.printf("Programm %lu %s gestartet: Ventil %u, %lu Sekunden\n",(unsigned long)p.id,automatic?"automatisch":"manuell",p.valveIndex+1,(unsigned long)durationSeconds_);return true;
 }
 bool RuntimeManager::stop(){if(!isRunning()||valveManager_->channel(valveIndex_).pulseActive||!valveManager_->pulse(valveIndex_))return false;Serial.printf("Programmlauf abgebrochen, Ventil %u wird geschlossen\n",valveIndex_+1);clearState();return true;}
 bool RuntimeManager::isRunning()const{return scheduler_&&valveManager_&&runningProgramIndex_>=0&&runningProgramIndex_<Scheduler::MAX_PROGRAMS;}

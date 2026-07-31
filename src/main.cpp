@@ -9,6 +9,7 @@
 #include "time/TimeManager.h"
 #include "network/WebManager.h"
 #include "weather/WeatherManager.h"
+#include "smart/SmartControlManager.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -17,6 +18,7 @@ static RuntimeManager runtimeManager;
 static TimeManager timeManager;
 static WebManager webManager;
 static WeatherManager weatherManager;
+static SmartControlManager smartControlManager;
 
 void setup()
 {
@@ -34,7 +36,9 @@ void setup()
     timeManager.begin();
     runtimeManager.begin(scheduler, valveManager, timeManager);
     weatherManager.begin(timeManager);
+    smartControlManager.begin();
     runtimeManager.setWeatherManager(weatherManager);
+    runtimeManager.setSmartControlManager(smartControlManager);
     
     displayManager.begin(
         valveManager,
@@ -47,7 +51,8 @@ void setup()
         runtimeManager,
         valveManager,
         timeManager,
-        weatherManager);
+        weatherManager,
+        smartControlManager);
 
     Serial.println("System bereit");
 }
