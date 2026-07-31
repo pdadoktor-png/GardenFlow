@@ -187,6 +187,20 @@ void DisplayManager::navigationEvent(lv_event_t* event)
 }
 
 
+void DisplayManager::programsMenuEvent(lv_event_t* event)
+{
+    if (instance_ == nullptr || lv_event_get_code(event) != LV_EVENT_CLICKED)
+    {
+        return;
+    }
+
+    if (instance_->footer_ != nullptr)
+    {
+        const bool hidden = lv_obj_has_flag(instance_->footer_, LV_OBJ_FLAG_HIDDEN);
+        instance_->setFooterVisible(hidden);
+    }
+}
+
 void DisplayManager::runtimeStopEvent(lv_event_t* event)
 {
     if (instance_ == nullptr ||
@@ -329,6 +343,17 @@ void DisplayManager::createHeader(lv_obj_t* screen)
 
     pageTitleLabel_ = createLabel(header, "MANUELL", Theme::accent());
     lv_obj_align(pageTitleLabel_, LV_ALIGN_CENTER, 25, 0);
+
+    programsMenuButton_ = lv_button_create(header);
+    lv_obj_set_size(programsMenuButton_, 58, 32);
+    lv_obj_set_pos(programsMenuButton_, 102, 6);
+    lv_obj_set_style_radius(programsMenuButton_, 6, 0);
+    lv_obj_set_style_shadow_width(programsMenuButton_, 0, 0);
+    lv_obj_set_style_bg_color(programsMenuButton_, Theme::panelAlt(), 0);
+    lv_obj_add_event_cb(programsMenuButton_, programsMenuEvent, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t* menuLabel = createLabel(programsMenuButton_, "MENU", Theme::text());
+    lv_obj_center(menuLabel);
+    lv_obj_add_flag(programsMenuButton_, LV_OBJ_FLAG_HIDDEN);
 
     modeLabel_ = createLabel(header, "HAND", Theme::textDim());
     lv_obj_align(modeLabel_, LV_ALIGN_RIGHT_MID, -70, 0);
@@ -514,7 +539,8 @@ void DisplayManager::createFooter(lv_obj_t* screen)
         "MANUELL", "PROGRAMME", "STATUS", "SETUP"
     };
 
-    lv_obj_t* footer = lv_obj_create(screen);
+    footer_ = lv_obj_create(screen);
+    lv_obj_t* footer = footer_;
     lv_obj_set_size(footer, SCREEN_WIDTH, FOOTER_HEIGHT);
     lv_obj_set_pos(footer, 0, SCREEN_HEIGHT - FOOTER_HEIGHT);
     lv_obj_set_style_bg_color(footer, Theme::header(), 0);
@@ -548,6 +574,24 @@ void DisplayManager::createFooter(lv_obj_t* screen)
     }
 }
 
+void DisplayManager::setFooterVisible(bool visible)
+{
+    if (footer_ == nullptr)
+    {
+        return;
+    }
+
+    if (visible)
+    {
+        lv_obj_clear_flag(footer_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(footer_);
+    }
+    else
+    {
+        lv_obj_add_flag(footer_, LV_OBJ_FLAG_HIDDEN);
+    }
+}
+
 void DisplayManager::showPage(Page page)
 {
     const uint8_t selected = static_cast<uint8_t>(page);
@@ -562,6 +606,20 @@ void DisplayManager::showPage(Page page)
     };
 
     activePage_ = page;
+
+    const bool programsPage = page == Page::Programs;
+    setFooterVisible(!programsPage);
+    if (programsMenuButton_ != nullptr)
+    {
+        if (programsPage)
+        {
+            lv_obj_clear_flag(programsMenuButton_, LV_OBJ_FLAG_HIDDEN);
+        }
+        else
+        {
+            lv_obj_add_flag(programsMenuButton_, LV_OBJ_FLAG_HIDDEN);
+        }
+    }
 
     for (uint8_t i = 0; i < static_cast<uint8_t>(Page::Count); ++i)
     {

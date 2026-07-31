@@ -61,6 +61,8 @@ private:
     lv_obj_t* clockLabel_ = nullptr;
     lv_obj_t* modeLabel_ = nullptr;
     lv_obj_t* pageTitleLabel_ = nullptr;
+    lv_obj_t* footer_ = nullptr;
+    lv_obj_t* programsMenuButton_ = nullptr;
     lv_obj_t* toast_ = nullptr;
 
     lv_obj_t* runtimeOverlay_ = nullptr;
@@ -99,6 +101,7 @@ private:
     static void brightnessSliderEvent(lv_event_t* event);
     static void pulseSliderEvent(lv_event_t* event);
     static void runtimeStopEvent(lv_event_t* event);
+    static void programsMenuEvent(lv_event_t* event);
 
     void createDashboard();
     void createHeader(lv_obj_t* screen);
@@ -111,6 +114,7 @@ private:
     void createRuntimeOverlay(lv_obj_t* screen);
 
     void showPage(Page page);
+    void setFooterVisible(bool visible);
     void updateClock();
     void updateStatus();
     void updateToast();
