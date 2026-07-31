@@ -189,16 +189,15 @@ void DisplayManager::navigationEvent(lv_event_t* event)
 
 void DisplayManager::programsMenuEvent(lv_event_t* event)
 {
-    if (instance_ == nullptr || lv_event_get_code(event) != LV_EVENT_CLICKED)
+    if (instance_ == nullptr || lv_event_get_code(event) != LV_EVENT_PRESSED)
     {
         return;
     }
 
-    if (instance_->footer_ != nullptr)
-    {
-        const bool hidden = lv_obj_has_flag(instance_->footer_, LV_OBJ_FLAG_HIDDEN);
-        instance_->setFooterVisible(hidden);
-    }
+    // Auf der langen Programmseite ist die Fussnavigation ausgeblendet.
+    // Der Kopf-Button fuehrt deshalb direkt zur manuellen Hauptseite, auf
+    // der die normale Navigation wieder sichtbar ist.
+    instance_->showPage(Page::Manual);
 }
 
 void DisplayManager::runtimeStopEvent(lv_event_t* event)
@@ -345,13 +344,13 @@ void DisplayManager::createHeader(lv_obj_t* screen)
     lv_obj_align(pageTitleLabel_, LV_ALIGN_CENTER, 25, 0);
 
     programsMenuButton_ = lv_button_create(header);
-    lv_obj_set_size(programsMenuButton_, 58, 32);
-    lv_obj_set_pos(programsMenuButton_, 102, 6);
+    lv_obj_set_size(programsMenuButton_, 72, 34);
+    lv_obj_set_pos(programsMenuButton_, 94, 5);
     lv_obj_set_style_radius(programsMenuButton_, 6, 0);
     lv_obj_set_style_shadow_width(programsMenuButton_, 0, 0);
     lv_obj_set_style_bg_color(programsMenuButton_, Theme::panelAlt(), 0);
-    lv_obj_add_event_cb(programsMenuButton_, programsMenuEvent, LV_EVENT_CLICKED, nullptr);
-    lv_obj_t* menuLabel = createLabel(programsMenuButton_, "MENU", Theme::text());
+    lv_obj_add_event_cb(programsMenuButton_, programsMenuEvent, LV_EVENT_PRESSED, nullptr);
+    lv_obj_t* menuLabel = createLabel(programsMenuButton_, "MENUE", Theme::text());
     lv_obj_center(menuLabel);
     lv_obj_add_flag(programsMenuButton_, LV_OBJ_FLAG_HIDDEN);
 
