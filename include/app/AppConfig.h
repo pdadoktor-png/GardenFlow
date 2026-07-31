@@ -11,6 +11,11 @@ namespace AppConfig
     static constexpr uint32_t BUTTON_LOCKOUT_MS = 500UL;
     static constexpr float BACKLIGHT = 0.80f;
 
+    // Energiesparen: Displaybeleuchtung nach Inaktivitaet ausschalten.
+    static constexpr uint16_t DISPLAY_SLEEP_TIMEOUT_SECONDS = 20;
+    static constexpr uint16_t DISPLAY_SLEEP_TIMEOUT_MIN_SECONDS = 5;
+    static constexpr uint16_t DISPLAY_SLEEP_TIMEOUT_MAX_SECONDS = 300;
+
     // WLAN-Zugangsdaten stehen lokal in AppSecrets.h und werden nicht eingecheckt.
     static constexpr const char* WIFI_SSID = AppSecrets::WIFI_SSID;
     static constexpr const char* WIFI_PASSWORD = AppSecrets::WIFI_PASSWORD;

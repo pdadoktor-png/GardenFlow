@@ -2,6 +2,7 @@
 #include <Arduino.h>
 #include <lv_conf.h>
 #include <esp32_smartdisplay.h>
+#include <Preferences.h>
 
 #include "AppConfig.h"
 #include "ValveManager.h"
@@ -84,12 +85,19 @@ private:
     lv_obj_t* pulseValueLabel_ = nullptr;
     lv_obj_t* brightnessSlider_ = nullptr;
     lv_obj_t* pulseSlider_ = nullptr;
+    lv_obj_t* sleepTimeoutSlider_ = nullptr;
+    lv_obj_t* sleepTimeoutValueLabel_ = nullptr;
+    lv_obj_t* sleepOverlay_ = nullptr;
 
+    Preferences displayPreferences_;
     Page activePage_ = Page::Manual;
     uint32_t toastHideAtMs_ = 0;
     uint32_t lastClockUpdateMs_ = 0;
     uint32_t lastStatusUpdateMs_ = 0;
     uint8_t brightnessPercent_ = 80;
+    uint16_t sleepTimeoutSeconds_ = AppConfig::DISPLAY_SLEEP_TIMEOUT_SECONDS;
+    uint32_t lastUserActivityMs_ = 0;
+    bool displaySleeping_ = false;
     bool runtimeOverlayVisible_ = false;
     int16_t lastRuntimeProgramIndex_ = -1;
 
@@ -102,6 +110,8 @@ private:
     static void pulseSliderEvent(lv_event_t* event);
     static void runtimeStopEvent(lv_event_t* event);
     static void programsMenuEvent(lv_event_t* event);
+    static void sleepTimeoutSliderEvent(lv_event_t* event);
+    static void sleepOverlayEvent(lv_event_t* event);
 
     void createDashboard();
     void createHeader(lv_obj_t* screen);
@@ -112,6 +122,7 @@ private:
     void createValveCard(lv_obj_t* parent, uint8_t index, int x);
     void createFooter(lv_obj_t* screen);
     void createRuntimeOverlay(lv_obj_t* screen);
+    void createSleepOverlay(lv_obj_t* screen);
 
     void showPage(Page page);
     void setFooterVisible(bool visible);
@@ -119,7 +130,12 @@ private:
     void updateStatus();
     void updateToast();
     void updateRuntimeOverlay();
+    void updatePowerSaving();
+    void noteUserActivity();
+    void sleepDisplay();
+    void wakeDisplay();
     void applyBrightness(uint8_t percent);
+    void applySleepTimeout(uint16_t seconds);
     void applyPulseDuration(uint32_t durationMs);
     
 };

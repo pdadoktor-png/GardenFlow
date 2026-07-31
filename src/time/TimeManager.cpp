@@ -33,6 +33,7 @@ void TimeManager::begin() {
     valid_ = false;
 
     WiFi.mode(WIFI_STA);
+    WiFi.setSleep(true);
     WiFi.setAutoReconnect(true);
     WiFi.persistent(false);
 

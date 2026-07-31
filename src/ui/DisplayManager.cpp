@@ -46,7 +46,25 @@ void DisplayManager::begin(
     valveManager_->setStateChangedCallback(valveStateChanged);
 
     smartdisplay_init();
+
+    displayPreferences_.begin("display", false);
+    brightnessPercent_ = displayPreferences_.getUChar(
+        "brightness",
+        static_cast<uint8_t>(AppConfig::BACKLIGHT * 100.0f)
+    );
+    sleepTimeoutSeconds_ = displayPreferences_.getUShort(
+        "sleepSec",
+        AppConfig::DISPLAY_SLEEP_TIMEOUT_SECONDS
+    );
+    brightnessPercent_ = constrain(brightnessPercent_, 10, 100);
+    sleepTimeoutSeconds_ = constrain(
+        sleepTimeoutSeconds_,
+        AppConfig::DISPLAY_SLEEP_TIMEOUT_MIN_SECONDS,
+        AppConfig::DISPLAY_SLEEP_TIMEOUT_MAX_SECONDS
+    );
+
     applyBrightness(brightnessPercent_);
+    lastUserActivityMs_ = millis();
 
     createDashboard();
     showPage(Page::Manual);
@@ -77,6 +95,7 @@ void DisplayManager::update()
     updateStatus();
     updateToast();
     updateRuntimeOverlay();
+    updatePowerSaving();
 }
 
 void DisplayManager::refreshValve(uint8_t index)
@@ -257,6 +276,23 @@ void DisplayManager::pulseSliderEvent(lv_event_t* event)
     }
 }
 
+void DisplayManager::sleepTimeoutSliderEvent(lv_event_t* event)
+{
+    if (instance_ == nullptr || lv_event_get_code(event) != LV_EVENT_VALUE_CHANGED) return;
+    lv_obj_t* slider = static_cast<lv_obj_t*>(lv_event_get_target(event));
+    const uint16_t seconds = static_cast<uint16_t>(lv_slider_get_value(slider));
+    instance_->applySleepTimeout(seconds);
+    instance_->noteUserActivity();
+    if (instance_->sleepTimeoutValueLabel_ != nullptr)
+        lv_label_set_text_fmt(instance_->sleepTimeoutValueLabel_, "%u s", static_cast<unsigned>(seconds));
+}
+
+void DisplayManager::sleepOverlayEvent(lv_event_t* event)
+{
+    if (instance_ == nullptr || lv_event_get_code(event) != LV_EVENT_PRESSED) return;
+    instance_->wakeDisplay();
+}
+
 void DisplayManager::createDashboard()
 {
     lv_obj_t* screen = lv_screen_active();
@@ -278,6 +314,8 @@ void DisplayManager::createDashboard()
     lv_obj_set_style_radius(toast_, 8, 0);
     lv_obj_align(toast_, LV_ALIGN_BOTTOM_MID, 0, -48);
     lv_obj_add_flag(toast_, LV_OBJ_FLAG_HIDDEN);
+
+    createSleepOverlay(screen);
 }
 
 void DisplayManager::createRuntimeOverlay(lv_obj_t* screen)
@@ -324,6 +362,20 @@ void DisplayManager::createRuntimeOverlay(lv_obj_t* screen)
     lv_obj_center(stopLabel);
 
     lv_obj_add_flag(runtimeOverlay_, LV_OBJ_FLAG_HIDDEN);
+}
+
+void DisplayManager::createSleepOverlay(lv_obj_t* screen)
+{
+    sleepOverlay_ = lv_obj_create(screen);
+    lv_obj_remove_style_all(sleepOverlay_);
+    lv_obj_set_size(sleepOverlay_, LV_PCT(100), LV_PCT(100));
+    lv_obj_set_pos(sleepOverlay_, 0, 0);
+    lv_obj_set_style_bg_color(sleepOverlay_, lv_color_black(), 0);
+    lv_obj_set_style_bg_opa(sleepOverlay_, LV_OPA_COVER, 0);
+    lv_obj_add_flag(sleepOverlay_, LV_OBJ_FLAG_CLICKABLE);
+    lv_obj_clear_flag(sleepOverlay_, LV_OBJ_FLAG_SCROLLABLE);
+    lv_obj_add_event_cb(sleepOverlay_, sleepOverlayEvent, LV_EVENT_PRESSED, nullptr);
+    lv_obj_add_flag(sleepOverlay_, LV_OBJ_FLAG_HIDDEN);
 }
 
 void DisplayManager::createHeader(lv_obj_t* screen)
@@ -445,8 +497,19 @@ void DisplayManager::createSetupPage(lv_obj_t* parent)
         nullptr
     );
 
-    lv_obj_t* touchText = createLabel(displayPanel, "Touch: XPT2046 bereit", Theme::open());
-    lv_obj_set_pos(touchText, 2, 112);
+    lv_obj_t* timeoutLabel = createLabel(displayPanel, "Display aus nach", Theme::textDim());
+    lv_obj_set_pos(timeoutLabel, 2, 98);
+
+    sleepTimeoutValueLabel_ = createLabel(displayPanel, "-- s", Theme::accent());
+    lv_obj_align(sleepTimeoutValueLabel_, LV_ALIGN_TOP_RIGHT, -2, 98);
+    lv_label_set_text_fmt(sleepTimeoutValueLabel_, "%u s", static_cast<unsigned>(sleepTimeoutSeconds_));
+
+    sleepTimeoutSlider_ = lv_slider_create(displayPanel);
+    lv_obj_set_size(sleepTimeoutSlider_, 184, 14);
+    lv_obj_set_pos(sleepTimeoutSlider_, 2, 130);
+    lv_slider_set_range(sleepTimeoutSlider_, AppConfig::DISPLAY_SLEEP_TIMEOUT_MIN_SECONDS, AppConfig::DISPLAY_SLEEP_TIMEOUT_MAX_SECONDS);
+    lv_slider_set_value(sleepTimeoutSlider_, sleepTimeoutSeconds_, LV_ANIM_OFF);
+    lv_obj_add_event_cb(sleepTimeoutSlider_, sleepTimeoutSliderEvent, LV_EVENT_VALUE_CHANGED, nullptr);
 
     lv_obj_t* valvePanel = lv_obj_create(parent);
     lv_obj_set_size(valvePanel, 218, 164);
@@ -768,11 +831,66 @@ void DisplayManager::updateToast()
     }
 }
 
+void DisplayManager::updatePowerSaving()
+{
+    lv_indev_t* indev = nullptr;
+    while ((indev = lv_indev_get_next(indev)) != nullptr)
+    {
+        if (lv_indev_get_type(indev) == LV_INDEV_TYPE_POINTER &&
+            lv_indev_get_state(indev) == LV_INDEV_STATE_PRESSED)
+        {
+            noteUserActivity();
+            break;
+        }
+    }
+
+    if (!displaySleeping_ && sleepTimeoutSeconds_ > 0 &&
+        static_cast<uint32_t>(millis() - lastUserActivityMs_) >=
+            static_cast<uint32_t>(sleepTimeoutSeconds_) * 1000UL)
+        sleepDisplay();
+}
+
+void DisplayManager::noteUserActivity()
+{
+    lastUserActivityMs_ = millis();
+}
+
+void DisplayManager::sleepDisplay()
+{
+    if (displaySleeping_) return;
+    displaySleeping_ = true;
+    if (sleepOverlay_ != nullptr)
+    {
+        lv_obj_clear_flag(sleepOverlay_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(sleepOverlay_);
+    }
+    smartdisplay_lcd_set_backlight(0.0f);
+    Serial.println("Displaybeleuchtung aus (Energiesparen)");
+}
+
+void DisplayManager::wakeDisplay()
+{
+    noteUserActivity();
+    if (!displaySleeping_) return;
+    smartdisplay_lcd_set_backlight(static_cast<float>(brightnessPercent_) / 100.0f);
+    if (sleepOverlay_ != nullptr) lv_obj_add_flag(sleepOverlay_, LV_OBJ_FLAG_HIDDEN);
+    displaySleeping_ = false;
+    Serial.println("Displaybeleuchtung an");
+}
+
 void DisplayManager::applyBrightness(uint8_t percent)
 {
     percent = constrain(percent, 10, 100);
     brightnessPercent_ = percent;
-    smartdisplay_lcd_set_backlight(static_cast<float>(percent) / 100.0f);
+    displayPreferences_.putUChar("brightness", brightnessPercent_);
+    if (!displaySleeping_)
+        smartdisplay_lcd_set_backlight(static_cast<float>(percent) / 100.0f);
+}
+
+void DisplayManager::applySleepTimeout(uint16_t seconds)
+{
+    sleepTimeoutSeconds_ = constrain(seconds, AppConfig::DISPLAY_SLEEP_TIMEOUT_MIN_SECONDS, AppConfig::DISPLAY_SLEEP_TIMEOUT_MAX_SECONDS);
+    displayPreferences_.putUShort("sleepSec", sleepTimeoutSeconds_);
 }
 
 void DisplayManager::applyPulseDuration(uint32_t durationMs)
