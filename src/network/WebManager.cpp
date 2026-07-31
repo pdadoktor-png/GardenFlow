@@ -36,14 +36,19 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <section class="card"><div class="muted">Aktueller Lauf</div><div id="running" class="big">Kein Programm</div><div id="remaining" class="muted">--</div><div style="margin-top:12px"><button class="stop" id="stop" onclick="post('/api/stop')">STOPP</button></div></section>
   <section class="card"><div class="muted">Ventile</div><div id="valves"></div></section>
 </div>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Bewässerungsplan</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="programs"></div></section>
+<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Bewässerungsplan</div></div><div><button onclick="newProgram()">+ Neu</button> <button class="secondary" onclick="loadAll()">Aktualisieren</button></div></div><div id="programs"></div></section>
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,opt){const r=await fetch(url,opt);const t=await r.text();if(!r.ok)throw new Error(t||r.status);return t?JSON.parse(t):{};}
-async function post(url){try{await api(url,{method:'POST'});await loadAll()}catch(e){alert(e.message)}}
+async function post(url,data){try{const opt={method:'POST'};if(data){opt.headers={'Content-Type':'application/x-www-form-urlencoded'};opt.body=new URLSearchParams(data)}await api(url,opt);await loadAll()}catch(e){alert(e.message)}}
 function badge(id,text,cls){const e=document.getElementById(id);e.textContent=text;e.className='badge '+cls}
 async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.timeValid?'bereit':'gesperrt',s.timeValid?'ok':'warn');document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
-async function loadPrograms(){try{const p=await api('/api/programs');document.getElementById('programs').innerHTML=p.programs.length?p.programs.map(x=>`<div class="program"><div class="row"><div><b>Programm ${x.id}</b> · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${x.enabled?'aktiv':'inaktiv'}</div></div><button ${(!x.enabled||p.running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div>`).join(''):'<div class="muted">Keine Programme vorhanden</div>'}catch(e){document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>'}}
+let programCache=[];
+async function loadPrograms(){try{const p=await api('/api/programs');programCache=p.programs;document.getElementById('programs').innerHTML=p.programs.length?p.programs.map(x=>`<div class="program"><div class="row"><div><b>Programm ${x.id}</b> · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${x.enabled?'aktiv':'inaktiv'}</div></div><div><button class="secondary" onclick="editProgram(${x.index})">Bearbeiten</button> <button class="secondary" onclick="post('/api/program/copy',{index:${x.index}})">Kopieren</button> <button class="secondary" onclick="post('/api/program/toggle',{index:${x.index}})">${x.enabled?'Aus':'Ein'}</button> <button class="stop" onclick="deleteProgram(${x.index})">Löschen</button> <button ${(!x.enabled||p.running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div></div>`).join(''):'<div class="muted">Keine Programme vorhanden</div>'}catch(e){document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>'}}
+function readProgramInput(x){const valve=prompt('Ventil (1 oder 2)',String((x?.valve??0)+1));if(valve===null)return null;const time=prompt('Startzeit HH:MM',`${String(x?.hour??6).padStart(2,'0')}:${String(x?.minute??0).padStart(2,'0')}`);if(time===null)return null;const duration=prompt('Dauer in Minuten',String(x?.durationMinutes??15));if(duration===null)return null;const days=prompt('Wochentage als Bitmaske: Mo=1, Di=2, Mi=4, Do=8, Fr=16, Sa=32, So=64; täglich=127',String(x?.weekdays??127));if(days===null)return null;const m=/^(\d{1,2}):(\d{2})$/.exec(time);if(!m){alert('Ungültige Uhrzeit');return null}return{valve:Number(valve)-1,hour:Number(m[1]),minute:Number(m[2]),duration:Number(duration),days:Number(days),enabled:x?.enabled?1:0};}
+async function newProgram(){const d=readProgramInput(null);if(!d)return;await post('/api/program/create',d)}
+async function editProgram(index){const x=programCache.find(p=>p.index===index);const d=readProgramInput(x);if(!d)return;d.index=index;d.enabled=x.enabled?1:0;await post('/api/program/update',d)}
+async function deleteProgram(index){if(confirm('Programm wirklich löschen?'))await post('/api/program/delete',{index})}
 async function loadAll(){await Promise.all([loadStatus(),loadPrograms()])}loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);
 </script>
 </body></html>
@@ -122,6 +127,11 @@ void WebManager::configureRoutes()
     server_.on("/", HTTP_GET, [this]() { handleRoot(); });
     server_.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
     server_.on("/api/programs", HTTP_GET, [this]() { handlePrograms(); });
+    server_.on("/api/program/create", HTTP_POST, [this]() { handleCreateProgram(); });
+    server_.on("/api/program/update", HTTP_POST, [this]() { handleUpdateProgram(); });
+    server_.on("/api/program/delete", HTTP_POST, [this]() { handleDeleteProgram(); });
+    server_.on("/api/program/copy", HTTP_POST, [this]() { handleCopyProgram(); });
+    server_.on("/api/program/toggle", HTTP_POST, [this]() { handleToggleProgram(); });
     server_.on("/api/program/start", HTTP_POST, [this]() { handleStartProgram(); });
     server_.on("/api/stop", HTTP_POST, [this]() { handleStop(); });
     server_.on("/api/valve/toggle", HTTP_POST, [this]() { handleToggleValve(); });
@@ -254,12 +264,140 @@ void WebManager::handlePrograms()
         body += String(p.durationSeconds / 60UL);
         body += F(",\"enabled\":");
         body += p.enabled ? F("true") : F("false");
+        body += F(",\"weekdays\":");
+        body += String(p.weekdays);
         body += F(",\"days\":\"");
         body += weekdayText(p.weekdays);
         body += F("\"}");
     }
     body += F("]}");
     sendJson(200, body);
+}
+
+void WebManager::handleCreateProgram()
+{
+    if (!scheduler_)
+    {
+        sendJson(503, "{\"error\":\"System nicht bereit\"}");
+        return;
+    }
+    const int valve = server_.hasArg("valve") ? server_.arg("valve").toInt() : 0;
+    const int16_t index = scheduler_->createProgram(static_cast<uint8_t>(valve));
+    if (index < 0)
+    {
+        sendJson(409, "{\"error\":\"Kein freier Programmplatz\"}");
+        return;
+    }
+    if (server_.hasArg("hour") && server_.hasArg("minute"))
+        scheduler_->setStartTime(static_cast<uint8_t>(index), server_.arg("hour").toInt(), server_.arg("minute").toInt());
+    if (server_.hasArg("duration"))
+        scheduler_->setDurationMinutes(static_cast<uint8_t>(index), server_.arg("duration").toInt());
+    if (server_.hasArg("days"))
+    {
+        const uint8_t mask = static_cast<uint8_t>(server_.arg("days").toInt()) & 0x7F;
+        for (uint8_t d = 0; d < 7; ++d)
+            scheduler_->setWeekday(static_cast<uint8_t>(index), static_cast<Scheduler::Weekday>(d), (mask & (1U << d)) != 0);
+    }
+    sendJson(200, String("{\"ok\":true,\"index\":") + String(index) + "}");
+}
+
+void WebManager::handleUpdateProgram()
+{
+    if (!scheduler_ || !server_.hasArg("index"))
+    {
+        sendJson(400, "{\"error\":\"index fehlt\"}");
+        return;
+    }
+    const int index = server_.arg("index").toInt();
+    if (index < 0 || index >= Scheduler::MAX_PROGRAMS || !scheduler_->isProgramUsed(static_cast<uint8_t>(index)))
+    {
+        sendJson(404, "{\"error\":\"Programm nicht gefunden\"}");
+        return;
+    }
+    const uint8_t i = static_cast<uint8_t>(index);
+    bool ok = true;
+    if (server_.hasArg("valve")) ok &= scheduler_->setValve(i, server_.arg("valve").toInt());
+    if (server_.hasArg("hour") && server_.hasArg("minute")) ok &= scheduler_->setStartTime(i, server_.arg("hour").toInt(), server_.arg("minute").toInt());
+    if (server_.hasArg("duration")) ok &= scheduler_->setDurationMinutes(i, server_.arg("duration").toInt());
+    if (server_.hasArg("days"))
+    {
+        const uint8_t mask = static_cast<uint8_t>(server_.arg("days").toInt()) & 0x7F;
+        for (uint8_t d = 0; d < 7; ++d)
+            ok &= scheduler_->setWeekday(i, static_cast<Scheduler::Weekday>(d), (mask & (1U << d)) != 0);
+    }
+    if (server_.hasArg("enabled")) ok &= scheduler_->setProgramEnabled(i, server_.arg("enabled").toInt() != 0);
+    if (!ok)
+    {
+        sendJson(400, "{\"error\":\"Ungültige Programmdaten\"}");
+        return;
+    }
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleDeleteProgram()
+{
+    if (!scheduler_ || !server_.hasArg("index"))
+    {
+        sendJson(400, "{\"error\":\"index fehlt\"}");
+        return;
+    }
+    if (!scheduler_->deleteProgram(static_cast<uint8_t>(server_.arg("index").toInt())))
+    {
+        sendJson(409, "{\"error\":\"Programm konnte nicht gelöscht werden\"}");
+        return;
+    }
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleCopyProgram()
+{
+    if (!scheduler_ || !server_.hasArg("index"))
+    {
+        sendJson(400, "{\"error\":\"index fehlt\"}");
+        return;
+    }
+    const int sourceIndex = server_.arg("index").toInt();
+    if (sourceIndex < 0 || sourceIndex >= Scheduler::MAX_PROGRAMS || !scheduler_->isProgramUsed(static_cast<uint8_t>(sourceIndex)))
+    {
+        sendJson(404, "{\"error\":\"Programm nicht gefunden\"}");
+        return;
+    }
+    const auto source = scheduler_->program(static_cast<uint8_t>(sourceIndex));
+    const int16_t targetIndex = scheduler_->createProgram(source.valveIndex);
+    if (targetIndex < 0)
+    {
+        sendJson(409, "{\"error\":\"Kein freier Programmplatz\"}");
+        return;
+    }
+    const uint8_t t = static_cast<uint8_t>(targetIndex);
+    scheduler_->setStartTime(t, source.startHour, source.startMinute);
+    scheduler_->setDurationMinutes(t, static_cast<uint16_t>(source.durationSeconds / 60UL));
+    for (uint8_t d = 0; d < 7; ++d)
+        scheduler_->setWeekday(t, static_cast<Scheduler::Weekday>(d), (source.weekdays & (1U << d)) != 0);
+    scheduler_->setProgramEnabled(t, source.enabled);
+    sendJson(200, String("{\"ok\":true,\"index\":") + String(targetIndex) + "}");
+}
+
+void WebManager::handleToggleProgram()
+{
+    if (!scheduler_ || !server_.hasArg("index"))
+    {
+        sendJson(400, "{\"error\":\"index fehlt\"}");
+        return;
+    }
+    const int index = server_.arg("index").toInt();
+    if (index < 0 || index >= Scheduler::MAX_PROGRAMS || !scheduler_->isProgramUsed(static_cast<uint8_t>(index)))
+    {
+        sendJson(404, "{\"error\":\"Programm nicht gefunden\"}");
+        return;
+    }
+    const uint8_t i = static_cast<uint8_t>(index);
+    if (!scheduler_->setProgramEnabled(i, !scheduler_->program(i).enabled))
+    {
+        sendJson(409, "{\"error\":\"Programmstatus konnte nicht geändert werden\"}");
+        return;
+    }
+    sendJson(200, "{\"ok\":true}");
 }
 
 void WebManager::handleStartProgram()

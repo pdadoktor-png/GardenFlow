@@ -35,6 +35,11 @@ private:
     void handleRoot();
     void handleStatus();
     void handlePrograms();
+    void handleCreateProgram();
+    void handleUpdateProgram();
+    void handleDeleteProgram();
+    void handleCopyProgram();
+    void handleToggleProgram();
     void handleStartProgram();
     void handleStop();
     void handleToggleValve();
