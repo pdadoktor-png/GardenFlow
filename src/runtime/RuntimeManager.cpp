@@ -2,8 +2,10 @@
 #include "scheduler/Scheduler.h"
 #include "hardware/ValveManager.h"
 #include "time/TimeManager.h"
+#include "weather/WeatherManager.h"
 
 void RuntimeManager::begin(Scheduler& s, ValveManager& v, TimeManager& t){scheduler_=&s;valveManager_=&v;timeManager_=&t;clearState();Serial.println("RuntimeManager initialisiert");}
+void RuntimeManager::setWeatherManager(WeatherManager& weatherManager){weatherManager_=&weatherManager;}
 void RuntimeManager::update(){
     checkAutomaticStart();
     if(!isRunning()) return;
@@ -13,6 +15,7 @@ void RuntimeManager::update(){
 }
 void RuntimeManager::checkAutomaticStart(){
     if(isRunning()||!timeManager_||!timeManager_->isValid()) return;
+    if(weatherManager_ && weatherManager_->automaticPauseActive()) return;
     struct tm t={}; if(!timeManager_->getLocalTime(t)) return;
     const int32_t dayKey=(t.tm_year+1900)*1000+t.tm_yday; const int16_t minute=t.tm_hour*60+t.tm_min;
     if(dayKey==lastCheckedDayKey_ && minute==lastCheckedMinute_) return;

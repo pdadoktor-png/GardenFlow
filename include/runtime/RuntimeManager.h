@@ -1,10 +1,11 @@
 #pragma once
 #include <Arduino.h>
-class Scheduler; class ValveManager; class TimeManager;
+class Scheduler; class ValveManager; class TimeManager; class WeatherManager;
 class RuntimeManager {
 public:
     void begin(Scheduler& scheduler, ValveManager& valveManager, TimeManager& timeManager);
     void update();
+    void setWeatherManager(WeatherManager& weatherManager);
     bool startProgram(uint8_t programIndex, bool automatic=false);
     bool stop();
     bool isRunning() const;
@@ -16,7 +17,7 @@ public:
     uint8_t runningValveIndex() const;
     int16_t nextProgramIndex() const;
 private:
-    Scheduler* scheduler_=nullptr; ValveManager* valveManager_=nullptr; TimeManager* timeManager_=nullptr;
+    Scheduler* scheduler_=nullptr; ValveManager* valveManager_=nullptr; TimeManager* timeManager_=nullptr; WeatherManager* weatherManager_=nullptr;
     int16_t runningProgramIndex_=-1; uint32_t startedAtMs_=0; uint32_t durationSeconds_=0; uint8_t valveIndex_=0;
     bool automaticRun_=false; int32_t lastCheckedDayKey_=-1; int16_t lastCheckedMinute_=-1;
     uint32_t lastStartedProgramId_=0; int32_t lastStartedDayKey_=-1; int16_t lastStartedMinute_=-1;

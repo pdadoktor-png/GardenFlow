@@ -7,6 +7,7 @@ class Scheduler;
 class RuntimeManager;
 class ValveManager;
 class TimeManager;
+class WeatherManager;
 
 class WebManager
 {
@@ -14,7 +15,8 @@ public:
     void begin(Scheduler& scheduler,
                RuntimeManager& runtimeManager,
                ValveManager& valveManager,
-               TimeManager& timeManager);
+               TimeManager& timeManager,
+               WeatherManager& weatherManager);
     void update();
     bool isStarted() const;
 
@@ -24,6 +26,7 @@ private:
     RuntimeManager* runtimeManager_ = nullptr;
     ValveManager* valveManager_ = nullptr;
     TimeManager* timeManager_ = nullptr;
+    WeatherManager* weatherManager_ = nullptr;
     bool started_ = false;
     bool otaStarted_ = false;
     bool wifiWasConnected_ = false;
@@ -43,6 +46,8 @@ private:
     void handleStartProgram();
     void handleStop();
     void handleToggleValve();
+    void handleWeatherRefresh();
+    void handleWeatherSettings();
     void handleNotFound();
 
     void sendJson(int code, const String& body);

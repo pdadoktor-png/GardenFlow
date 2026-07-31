@@ -8,6 +8,7 @@
 #include "runtime/RuntimeManager.h"
 #include "scheduler/Scheduler.h"
 #include "time/TimeManager.h"
+#include "weather/WeatherManager.h"
 
 namespace
 {
@@ -34,9 +35,11 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <div class="top"><div><h1>GardenFlow</h1><div class="muted" id="address">wird verbunden …</div></div><div id="clock" class="big">--:--</div></div>
 <div class="grid">
   <section class="card"><div class="muted">System</div><div class="row"><span>WLAN</span><span id="wifi" class="badge">--</span></div><div class="row"><span>Zeit</span><span id="timeState" class="badge">--</span></div><div class="row"><span>Automatik</span><span id="autoState" class="badge">--</span></div></section>
+  <section class="card"><div class="muted">Wetter</div><div id="weatherMain" class="big">nicht eingerichtet</div><div id="weatherDetails" class="muted">API-Schluessel fehlt</div><div class="row"><span>Regenpause</span><span id="rainPause" class="badge">--</span></div><div style="margin-top:10px"><button class="secondary" onclick="post('/api/weather/refresh')">Aktualisieren</button></div></section>
   <section class="card"><div class="muted">Aktueller Lauf</div><div id="running" class="big">Kein Programm</div><div id="remaining" class="muted">--</div><div style="margin-top:12px"><button class="stop" id="stop" onclick="post('/api/stop')">STOPP</button></div></section>
   <section class="card"><div class="muted">Ventile</div><div id="valves"></div></section>
 </div>
+<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Wettersteuerung</div><div class="big">Automatische Regenpause</div></div></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Automatik</span><select id="weatherEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Regenmenge 24 h (mm)</span><input id="weatherRainMm" type="number" min="0.1" max="100" step="0.1"></label><label class="field"><span>Regenwahrscheinlichkeit (%)</span><input id="weatherPop" type="number" min="1" max="100"></label><div class="field"><span>&nbsp;</span><button onclick="saveWeatherSettings()">Speichern</button></div></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Bewässerungsplan</div></div><div><button onclick="newProgram()">+ Neu</button> <button class="secondary" onclick="loadAll()">Aktualisieren</button></div></div><div id="programs"></div></section>
 <div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
   <div class="top"><div><div class="muted">Programm</div><div id="editorTitle" class="big">Neu</div></div><button class="secondary" onclick="closeEditor()">Schließen</button></div>
@@ -54,7 +57,7 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;'
 async function api(url,opt){const r=await fetch(url,opt);const t=await r.text();if(!r.ok)throw new Error(t||r.status);return t?JSON.parse(t):{};}
 async function post(url,data){try{const opt={method:'POST'};if(data){opt.headers={'Content-Type':'application/x-www-form-urlencoded'};opt.body=new URLSearchParams(data)}await api(url,opt);await loadAll()}catch(e){alert(e.message)}}
 function badge(id,text,cls){const e=document.getElementById(id);e.textContent=text;e.className='badge '+cls}
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.timeValid?'bereit':'gesperrt',s.timeValid?'ok':'warn');document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));document.getElementById('weatherEnabled').value=s.weatherPauseEnabled?'1':'0';document.getElementById('weatherRainMm').value=s.weatherRainLimit;document.getElementById('weatherPop').value=s.weatherProbabilityLimit;document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 async function loadPrograms(){try{const p=await api('/api/programs');programCache=p.programs;document.getElementById('programs').innerHTML=p.programs.length?p.programs.map(x=>`<div class="program"><div class="row"><div><b>Programm ${x.id}</b> · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${x.enabled?'aktiv':'inaktiv'}</div></div><div><button class="secondary" onclick="editProgram(${x.index})">Bearbeiten</button> <button class="secondary" onclick="post('/api/program/copy',{index:${x.index}})">Kopieren</button> <button class="secondary" onclick="post('/api/program/toggle',{index:${x.index}})">${x.enabled?'Aus':'Ein'}</button> <button class="stop" onclick="deleteProgram(${x.index})">Löschen</button> <button ${(!x.enabled||p.running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div></div>`).join(''):'<div class="muted">Keine Programme vorhanden</div>'}catch(e){document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>'}}
 let editorIndex=-1,editorDays=127;
@@ -68,6 +71,7 @@ async function saveEditor(){const time=document.getElementById('editTime').value
 function newProgram(){openEditor(null)}
 function editProgram(index){openEditor(programCache.find(p=>p.index===index))}
 async function deleteProgram(index){if(confirm('Programm wirklich löschen?'))await post('/api/program/delete',{index})}
+async function saveWeatherSettings(){await post('/api/weather/settings',{enabled:Number(document.getElementById('weatherEnabled').value),rainMm:Number(document.getElementById('weatherRainMm').value),probability:Number(document.getElementById('weatherPop').value)})}
 async function loadAll(){await Promise.all([loadStatus(),loadPrograms()])}loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);
 </script>
 </body></html>
@@ -77,12 +81,14 @@ async function loadAll(){await Promise.all([loadStatus(),loadPrograms()])}loadAl
 void WebManager::begin(Scheduler& scheduler,
                        RuntimeManager& runtimeManager,
                        ValveManager& valveManager,
-                       TimeManager& timeManager)
+                       TimeManager& timeManager,
+                       WeatherManager& weatherManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
     valveManager_ = &valveManager;
     timeManager_ = &timeManager;
+    weatherManager_ = &weatherManager;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
@@ -154,6 +160,8 @@ void WebManager::configureRoutes()
     server_.on("/api/program/start", HTTP_POST, [this]() { handleStartProgram(); });
     server_.on("/api/stop", HTTP_POST, [this]() { handleStop(); });
     server_.on("/api/valve/toggle", HTTP_POST, [this]() { handleToggleValve(); });
+    server_.on("/api/weather/refresh", HTTP_POST, [this]() { handleWeatherRefresh(); });
+    server_.on("/api/weather/settings", HTTP_POST, [this]() { handleWeatherSettings(); });
     server_.onNotFound([this]() { handleNotFound(); });
 }
 
@@ -185,7 +193,7 @@ void WebManager::handleRoot()
 
 void WebManager::handleStatus()
 {
-    if (!timeManager_ || !runtimeManager_ || !valveManager_ || !scheduler_)
+    if (!timeManager_ || !runtimeManager_ || !valveManager_ || !scheduler_ || !weatherManager_)
     {
         sendJson(503, "{\"error\":\"System nicht bereit\"}");
         return;
@@ -229,6 +237,30 @@ void WebManager::handleStatus()
     body += String(runtimeManager_->remainingSeconds());
     body += F(",\"automatic\":");
     body += runtimeManager_->isAutomaticRun() ? F("true") : F("false");
+    body += F(",\"weatherConfigured\":");
+    body += weatherManager_->isConfigured() ? F("true") : F("false");
+    body += F(",\"weatherValid\":");
+    body += weatherManager_->isValid() ? F("true") : F("false");
+    body += F(",\"temperature\":");
+    body += String(weatherManager_->temperatureC(), 1);
+    body += F(",\"humidity\":");
+    body += String(weatherManager_->humidityPercent());
+    body += F(",\"rainMm\":");
+    body += String(weatherManager_->rainMmNext24Hours(), 1);
+    body += F(",\"rainProbability\":");
+    body += String(weatherManager_->maxRainProbabilityPercent());
+    body += F(",\"weatherDescription\":\"");
+    body += jsonEscape(weatherManager_->description());
+    body += F("\",\"weatherError\":\"");
+    body += jsonEscape(weatherManager_->lastError());
+    body += F("\",\"rainPause\":");
+    body += weatherManager_->automaticPauseActive() ? F("true") : F("false");
+    body += F(",\"weatherPauseEnabled\":");
+    body += weatherManager_->automaticPauseEnabled() ? F("true") : F("false");
+    body += F(",\"weatherRainLimit\":");
+    body += String(weatherManager_->rainLimitMm(), 1);
+    body += F(",\"weatherProbabilityLimit\":");
+    body += String(weatherManager_->probabilityLimitPercent());
     body += F(",\"valves\":[");
 
     for (uint8_t i = 0; i < AppConfig::DISPLAYED_VALVE_COUNT; ++i)
@@ -478,6 +510,44 @@ void WebManager::handleToggleValve()
         sendJson(409, "{\"error\":\"Ventilimpuls momentan nicht moeglich\"}");
         return;
     }
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleWeatherRefresh()
+{
+    if (!weatherManager_)
+    {
+        sendJson(503, "{\"error\":\"Wettermodul nicht bereit\"}");
+        return;
+    }
+    if (!weatherManager_->isConfigured())
+    {
+        sendJson(409, "{\"error\":\"OpenWeather API-Schluessel fehlt\"}");
+        return;
+    }
+    if (!weatherManager_->refreshNow())
+    {
+        sendJson(409, String("{\"error\":\"") + jsonEscape(weatherManager_->lastError()) + "\"}");
+        return;
+    }
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleWeatherSettings()
+{
+    if (!weatherManager_)
+    {
+        sendJson(503, "{\"error\":\"Wettermodul nicht bereit\"}");
+        return;
+    }
+
+    if (server_.hasArg("enabled"))
+        weatherManager_->setAutomaticPauseEnabled(server_.arg("enabled").toInt() != 0);
+    if (server_.hasArg("rainMm"))
+        weatherManager_->setRainLimitMm(server_.arg("rainMm").toFloat());
+    if (server_.hasArg("probability"))
+        weatherManager_->setProbabilityLimitPercent(static_cast<uint8_t>(server_.arg("probability").toInt()));
+
     sendJson(200, "{\"ok\":true}");
 }
 

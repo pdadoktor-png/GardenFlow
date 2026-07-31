@@ -8,6 +8,7 @@
 #include "runtime/RuntimeManager.h"
 #include "time/TimeManager.h"
 #include "network/WebManager.h"
+#include "weather/WeatherManager.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -15,6 +16,7 @@ static Scheduler scheduler;
 static RuntimeManager runtimeManager;
 static TimeManager timeManager;
 static WebManager webManager;
+static WeatherManager weatherManager;
 
 void setup()
 {
@@ -31,6 +33,8 @@ void setup()
     scheduler.begin();
     timeManager.begin();
     runtimeManager.begin(scheduler, valveManager, timeManager);
+    weatherManager.begin(timeManager);
+    runtimeManager.setWeatherManager(weatherManager);
     
     displayManager.begin(
         valveManager,
@@ -42,7 +46,8 @@ void setup()
         scheduler,
         runtimeManager,
         valveManager,
-        timeManager);
+        timeManager,
+        weatherManager);
 
     Serial.println("System bereit");
 }
@@ -52,6 +57,7 @@ void loop()
     valveManager.update();
     scheduler.update();
     timeManager.update();
+    weatherManager.update();
     runtimeManager.update();
     displayManager.update();
     webManager.update();
