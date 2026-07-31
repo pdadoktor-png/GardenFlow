@@ -1,0 +1,23 @@
+GARDENFLOW – WEB UND OTA
+========================
+
+1. WLAN-Daten wie bisher in include/app/AppConfig.h eintragen.
+
+2. Nach dem Start zeigt der serielle Monitor die Adresse an:
+   Weboberflaeche: http://192.168.x.x/
+
+3. Im Browser koennen Status, Programme und Ventile angezeigt werden.
+   Programme lassen sich manuell starten, laufende Programme stoppen.
+   Ventilimpulse sind waehrend eines Programmlaufs gesperrt.
+
+4. OTA:
+   Der Netzwerk-Port "gardenflow" erscheint in PlatformIO/Arduino,
+   sobald Computer und ESP32 im selben WLAN sind.
+
+   Optional in include/app/AppConfig.h ein OTA-Passwort setzen:
+   constexpr char OTA_PASSWORD[] = "mein-passwort";
+
+SICHERHEIT
+==========
+Die Weboberflaeche ist fuer das private Heimnetz vorgesehen und besitzt
+noch keine Benutzeranmeldung. Nicht ueber Portfreigaben ins Internet stellen.

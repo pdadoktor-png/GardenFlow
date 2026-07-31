@@ -1,0 +1,22 @@
+GardenFlow WLAN + NTP einrichten
+================================
+
+Datei oeffnen:
+  include/app/AppConfig.h
+
+Diese beiden Zeilen anpassen:
+  constexpr char WIFI_SSID[] = "DEIN_WLAN";
+  constexpr char WIFI_PASSWORD[] = "DEIN_PASSWORT";
+
+Danach neu bauen und hochladen.
+
+Erwartete serielle Ausgabe:
+  Verbinde mit WLAN: ...
+  WLAN verbunden: ...
+  IP-Adresse: ...
+  NTP-Synchronisierung gestartet
+  Systemzeit synchronisiert: TT.MM.JJJJ HH:MM:SS
+  Automatik freigegeben
+
+Bis zur erfolgreichen NTP-Synchronisierung zeigt das Display eine Ersatzzeit
+(Build-Zeit). Automatische Programme werden erst mit echter NTP-Zeit gestartet.
