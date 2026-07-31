@@ -161,7 +161,7 @@ void ProgramsPage::rebuildProgramList()
 
         addContexts_[valve].owner = this;
         addContexts_[valve].valveIndex = valve;
-        lv_obj_t* addButton = createTextButton(listContainer_, "+ Programm", 14, y, 452, 40,
+        lv_obj_t* addButton = createTextButton(listContainer_, "+ Programm", 14, y, 414, 40,
                                                addProgramEvent, &addContexts_[valve]);
         lv_obj_set_style_bg_color(addButton, Theme::panel(), 0);
         y += 54;
@@ -183,12 +183,15 @@ void ProgramsPage::createProgramCard(uint8_t slotIndex, uint8_t numberInValve, i
     ui.owner = this;
     ui.programIndex = slotIndex;
     ui.card = lv_obj_create(listContainer_);
-    lv_obj_set_size(ui.card, 452, 60);
+    // Rechts bleiben 38 Pixel bewusst frei. Dieser Bereich dient als
+    // sichere Scrollspur und enthält keine bedienbaren Elemente.
+    lv_obj_set_size(ui.card, 414, 60);
     lv_obj_set_pos(ui.card, 14, y);
     stylePanel(ui.card);
     lv_obj_clear_flag(ui.card, LV_OBJ_FLAG_SCROLLABLE);
-    lv_obj_add_flag(ui.card, LV_OBJ_FLAG_CLICKABLE);
-    lv_obj_add_event_cb(ui.card, programCardEvent, LV_EVENT_CLICKED, &ui);
+    // Die Karte selbst ist nicht mehr klickbar. Dadurch öffnet ein
+    // Scrollversuch nicht versehentlich den Programmeditor.
+    lv_obj_clear_flag(ui.card, LV_OBJ_FLAG_CLICKABLE);
 
     lv_obj_t* title = lv_label_create(ui.card);
     lv_label_set_text_fmt(title, "Programm %u", static_cast<unsigned>(numberInValve));
@@ -196,15 +199,24 @@ void ProgramsPage::createProgramCard(uint8_t slotIndex, uint8_t numberInValve, i
     lv_obj_set_pos(title, 0, 0);
 
     ui.details = lv_label_create(ui.card);
-    lv_obj_set_width(ui.details, 350);
+    lv_obj_set_width(ui.details, 292);
     lv_label_set_long_mode(ui.details, LV_LABEL_LONG_CLIP);
     lv_obj_set_style_text_color(ui.details, Theme::textDim(), 0);
     lv_obj_set_pos(ui.details, 0, 26);
 
     ui.enableSwitch = lv_switch_create(ui.card);
-    lv_obj_set_size(ui.enableSwitch, 52, 28);
-    lv_obj_align(ui.enableSwitch, LV_ALIGN_RIGHT_MID, -2, 0);
+    lv_obj_set_size(ui.enableSwitch, 46, 26);
+    lv_obj_set_pos(ui.enableSwitch, 304, 9);
     lv_obj_add_event_cb(ui.enableSwitch, programSwitchEvent, LV_EVENT_VALUE_CHANGED, &ui);
+
+    ui.editButton = lv_btn_create(ui.card);
+    lv_obj_set_size(ui.editButton, 42, 36);
+    lv_obj_set_pos(ui.editButton, 356, 4);
+    styleButton(ui.editButton);
+    lv_obj_add_event_cb(ui.editButton, programCardEvent, LV_EVENT_SHORT_CLICKED, &ui);
+    lv_obj_t* editLabel = lv_label_create(ui.editButton);
+    lv_label_set_text(editLabel, ">");
+    lv_obj_center(editLabel);
 
     updateProgramCard(slotIndex);
 }
@@ -416,7 +428,8 @@ lv_obj_t* ProgramsPage::createTextButton(lv_obj_t* parent, const char* text, int
     lv_obj_set_size(button, width, height);
     lv_obj_set_pos(button, x, y);
     styleButton(button);
-    lv_obj_add_event_cb(button, callback, LV_EVENT_CLICKED, userData ? userData : this);
+    // SHORT_CLICKED wird bei einer Scrollbewegung nicht ausgelöst.
+    lv_obj_add_event_cb(button, callback, LV_EVENT_SHORT_CLICKED, userData ? userData : this);
     lv_obj_t* label = lv_label_create(button);
     lv_label_set_text(label, text);
     lv_obj_center(label);

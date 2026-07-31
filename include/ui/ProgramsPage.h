@@ -24,6 +24,7 @@ private:
         lv_obj_t* card = nullptr;
         lv_obj_t* details = nullptr;
         lv_obj_t* enableSwitch = nullptr;
+        lv_obj_t* editButton = nullptr;
         uint8_t programIndex = 0;
     };
 
