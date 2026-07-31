@@ -27,6 +27,7 @@ button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:poin
 button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:8px 0}
 .badge{padding:4px 9px;border-radius:999px;background:#304237;font-size:.82rem}.ok{background:#285c38}.warn{background:#745b23}.off{background:#4d3a3a}
 .program{border-top:1px solid #314138;padding:11px 0}.program:first-child{border-top:0}.days{font-size:.86rem;color:#b5c3ba}.error{color:#ff9e98}
+.modal{display:none;position:fixed;inset:0;background:#000a;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.open{display:flex}.dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:#18231d;border:1px solid #3b5143;border-radius:16px;padding:18px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}input,select{border:1px solid #46594c;border-radius:9px;background:#101714;color:#edf5ef;padding:10px;font-size:1rem}.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{padding:9px 4px;background:#33463a;color:#edf5ef}.day.active{background:#7fda98;color:#102016}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}@media(max-width:540px){.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.weekdays{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
@@ -37,6 +38,17 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <section class="card"><div class="muted">Ventile</div><div id="valves"></div></section>
 </div>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Bewässerungsplan</div></div><div><button onclick="newProgram()">+ Neu</button> <button class="secondary" onclick="loadAll()">Aktualisieren</button></div></div><div id="programs"></div></section>
+<div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
+  <div class="top"><div><div class="muted">Programm</div><div id="editorTitle" class="big">Neu</div></div><button class="secondary" onclick="closeEditor()">Schließen</button></div>
+  <div class="formgrid" style="margin-top:16px">
+    <label class="field"><span>Ventil</span><select id="editValve"><option value="0">Ventil 1</option><option value="1">Ventil 2</option></select></label>
+    <label class="field"><span>Startzeit</span><input id="editTime" type="time" value="06:00"></label>
+    <label class="field"><span>Dauer (Minuten)</span><input id="editDuration" type="number" min="1" max="1440" value="15"></label>
+    <label class="field"><span>Status</span><select id="editEnabled"><option value="1">Aktiv</option><option value="0">Inaktiv</option></select></label>
+    <div class="field full"><span>Wochentage</span><div id="weekdayButtons" class="weekdays"></div></div>
+  </div>
+  <div class="actions"><button class="secondary" onclick="closeEditor()">Abbrechen</button><button onclick="saveEditor()">Speichern</button></div>
+</div></div>
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,opt){const r=await fetch(url,opt);const t=await r.text();if(!r.ok)throw new Error(t||r.status);return t?JSON.parse(t):{};}
@@ -45,9 +57,16 @@ function badge(id,text,cls){const e=document.getElementById(id);e.textContent=te
 async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.timeValid?'bereit':'gesperrt',s.timeValid?'ok':'warn');document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 async function loadPrograms(){try{const p=await api('/api/programs');programCache=p.programs;document.getElementById('programs').innerHTML=p.programs.length?p.programs.map(x=>`<div class="program"><div class="row"><div><b>Programm ${x.id}</b> · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${x.enabled?'aktiv':'inaktiv'}</div></div><div><button class="secondary" onclick="editProgram(${x.index})">Bearbeiten</button> <button class="secondary" onclick="post('/api/program/copy',{index:${x.index}})">Kopieren</button> <button class="secondary" onclick="post('/api/program/toggle',{index:${x.index}})">${x.enabled?'Aus':'Ein'}</button> <button class="stop" onclick="deleteProgram(${x.index})">Löschen</button> <button ${(!x.enabled||p.running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div></div>`).join(''):'<div class="muted">Keine Programme vorhanden</div>'}catch(e){document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>'}}
-function readProgramInput(x){const valve=prompt('Ventil (1 oder 2)',String((x?.valve??0)+1));if(valve===null)return null;const time=prompt('Startzeit HH:MM',`${String(x?.hour??6).padStart(2,'0')}:${String(x?.minute??0).padStart(2,'0')}`);if(time===null)return null;const duration=prompt('Dauer in Minuten',String(x?.durationMinutes??15));if(duration===null)return null;const days=prompt('Wochentage als Bitmaske: Mo=1, Di=2, Mi=4, Do=8, Fr=16, Sa=32, So=64; täglich=127',String(x?.weekdays??127));if(days===null)return null;const m=/^(\d{1,2}):(\d{2})$/.exec(time);if(!m){alert('Ungültige Uhrzeit');return null}return{valve:Number(valve)-1,hour:Number(m[1]),minute:Number(m[2]),duration:Number(duration),days:Number(days),enabled:x?.enabled?1:0};}
-async function newProgram(){const d=readProgramInput(null);if(!d)return;await post('/api/program/create',d)}
-async function editProgram(index){const x=programCache.find(p=>p.index===index);const d=readProgramInput(x);if(!d)return;d.index=index;d.enabled=x.enabled?1:0;await post('/api/program/update',d)}
+let editorIndex=-1,editorDays=127;
+const dayNames=['Mo','Di','Mi','Do','Fr','Sa','So'];
+function renderWeekdays(){document.getElementById('weekdayButtons').innerHTML=dayNames.map((n,i)=>`<button type="button" class="day ${(editorDays&(1<<i))?'active':''}" onclick="toggleEditorDay(${i})">${n}</button>`).join('')}
+function toggleEditorDay(i){editorDays^=(1<<i);renderWeekdays()}
+function openEditor(x){editorIndex=x?x.index:-1;editorDays=x?x.weekdays:127;document.getElementById('editorTitle').textContent=x?`Programm ${x.id} bearbeiten`:'Neues Programm';document.getElementById('editValve').value=String(x?x.valve:0);document.getElementById('editTime').value=`${String(x?x.hour:6).padStart(2,'0')}:${String(x?x.minute:0).padStart(2,'0')}`;document.getElementById('editDuration').value=String(x?x.durationMinutes:15);document.getElementById('editEnabled').value=x&&x.enabled?'1':'0';renderWeekdays();document.getElementById('editorModal').classList.add('open')}
+function closeEditor(){document.getElementById('editorModal').classList.remove('open')}
+function modalBackdrop(e){if(e.target.id==='editorModal')closeEditor()}
+async function saveEditor(){const time=document.getElementById('editTime').value.split(':');const duration=Number(document.getElementById('editDuration').value);if(time.length!==2||duration<1||duration>1440||editorDays===0){alert(editorDays===0?'Mindestens einen Wochentag auswählen':'Bitte gültige Werte eingeben');return}const d={valve:Number(document.getElementById('editValve').value),hour:Number(time[0]),minute:Number(time[1]),duration,days:editorDays,enabled:Number(document.getElementById('editEnabled').value)};if(editorIndex<0)await post('/api/program/create',d);else{d.index=editorIndex;await post('/api/program/update',d)}closeEditor()}
+function newProgram(){openEditor(null)}
+function editProgram(index){openEditor(programCache.find(p=>p.index===index))}
 async function deleteProgram(index){if(confirm('Programm wirklich löschen?'))await post('/api/program/delete',{index})}
 async function loadAll(){await Promise.all([loadStatus(),loadPrograms()])}loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);
 </script>
