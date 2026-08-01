@@ -143,11 +143,14 @@ void SetupPortal::handleSave()
         return;
     }
 
-    if (!webServer_.hasArg("ssid"))
+    if (!webServer_.hasArg("ssid") ||
+        !webServer_.hasArg("latitude") ||
+        !webServer_.hasArg("longitude") ||
+        !webServer_.hasArg("timezone"))
     {
         sendSetupPage(
             400,
-            "Bitte einen WLAN-Namen eingeben.",
+            "Bitte WLAN, Standort und Zeitzone vollständig eingeben.",
             false
         );
         return;
@@ -157,8 +160,13 @@ void SetupPortal::handleSave()
     String password = webServer_.hasArg("password")
         ? webServer_.arg("password")
         : String();
+    String timezone = webServer_.arg("timezone");
 
     ssid.trim();
+    timezone.trim();
+
+    const float latitude = webServer_.arg("latitude").toFloat();
+    const float longitude = webServer_.arg("longitude").toFloat();
 
     if (ssid.length() == 0 || ssid.length() > 32)
     {
@@ -170,17 +178,12 @@ void SetupPortal::handleSave()
         return;
     }
 
-    /*
-     * In 0033a werden ausschließlich WLAN-Daten geändert.
-     * Standort und Zeitzone bleiben auf ihren bisherigen
-     * beziehungsweise werkseitigen Werten.
-     */
     const bool saved = settingsManager_->saveNetworkLocation(
         ssid,
         password,
-        settingsManager_->latitude(),
-        settingsManager_->longitude(),
-        settingsManager_->timezone()
+        latitude,
+        longitude,
+        timezone
     );
 
     if (!saved)
@@ -205,7 +208,7 @@ void SetupPortal::handleSave()
 
     sendSetupPage(
         200,
-        "WLAN-Daten gespeichert. GardenFlow startet neu und verbindet sich mit dem Heimnetz.",
+        "WLAN, Standort und Zeitzone gespeichert. GardenFlow startet neu und verbindet sich mit dem Heimnetz.",
         true
     );
 }
@@ -275,6 +278,29 @@ void SetupPortal::sendSetupPage(
             "<label>WLAN-Passwort"
             "<input name='password' type='password' maxlength='64' "
             "autocomplete='current-password'></label>"
+            "<label>Breitengrad"
+            "<input name='latitude' type='number' min='-90' max='90' "
+            "step='0.00001' required value='"
+        );
+        html += String(settingsManager_ ? settingsManager_->latitude() : 0.0f, 5);
+        html += F(
+            "'></label>"
+            "<label>Längengrad"
+            "<input name='longitude' type='number' min='-180' max='180' "
+            "step='0.00001' required value='"
+        );
+        html += String(settingsManager_ ? settingsManager_->longitude() : 0.0f, 5);
+        html += F(
+            "'></label>"
+            "<label>Zeitzone"
+            "<input name='timezone' maxlength='96' required value='"
+        );
+        html += htmlEscape(settingsManager_ ? settingsManager_->timezone() : String("CET-1CEST,M3.5.0/2,M10.5.0/3"));
+        html += F(
+            "'></label>"
+            "<div class='small'>Deutschland: "
+            "CET-1CEST,M3.5.0/2,M10.5.0/3<br>"
+            "Sommer- und Winterzeit werden automatisch berücksichtigt.</div>"
             "<button type='submit'>Speichern und neu starten</button>"
             "</form>"
         );
