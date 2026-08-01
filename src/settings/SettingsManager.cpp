@@ -40,10 +40,8 @@ float SettingsManager::longitude() const
 bool SettingsManager::credentialsConfigured() const
 {
     return wifiSsid_.length() > 0 &&
-           wifiSsid_ != "DEIN_WLAN" &&
-           wifiSsid_ != "xxxx";
+           wifiSsid_ != "DEIN_WLAN";
 }
-
 
 bool SettingsManager::setupPortalRequested() 
 {
