@@ -29,6 +29,13 @@ button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:poin
 button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cursor:not-allowed}.row{display:flex;gap:8px;align-items:center;justify-content:space-between;margin:8px 0}
 .badge{padding:4px 9px;border-radius:999px;background:#304237;font-size:.82rem}.ok{background:#285c38}.warn{background:#745b23}.off{background:#4d3a3a}
 .program{border-top:1px solid #314138;padding:11px 0}.program:first-child{border-top:0}.days{font-size:.86rem;color:#b5c3ba}.error{color:#ff9e98}
+.nextProgram{margin-top:12px;border:1px solid #41604c;background:linear-gradient(135deg,#21352a,#17231d)}
+.nextProgramTime{font-size:2rem;font-weight:850;margin-top:6px}.nextProgramMeta{margin-top:5px;color:#c3d1c7}
+.scheduleGroup{margin-top:14px}.scheduleTitle{font-weight:850;font-size:1.05rem;margin:10px 0 6px}
+.scheduleItem{display:grid;grid-template-columns:74px 1fr auto;gap:10px;align-items:center;border-top:1px solid #314138;padding:10px 0}
+.scheduleItem:first-child{border-top:0}.scheduleTime{font-size:1.1rem;font-weight:850}.scheduleValve{font-size:.8rem;color:#a8b7ad}
+.programInactive{opacity:.55}
+
 .modal{display:none;position:fixed;inset:0;background:#000a;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.open{display:flex}.dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:#18231d;border:1px solid #3b5143;border-radius:16px;padding:18px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}input,select{border:1px solid #46594c;border-radius:9px;background:#101714;color:#edf5ef;padding:10px;font-size:1rem}.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{padding:9px 4px;background:#33463a;color:#edf5ef}.day.active{background:#7fda98;color:#102016}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.saveState{min-height:1.4em;margin-top:10px;color:#a8b7ad}.saveState.okmsg{color:#7fda98}.saveState.errmsg{color:#ff9e98}.dirtyMark{color:#ffd27a;font-weight:700}@media(max-width:540px){.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.weekdays{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
@@ -42,7 +49,9 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 </div>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Wettersteuerung <span id="weatherDirtyMark" class="dirtyMark"></span></div><div class="big">Automatische Regenpause</div></div></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Automatik</span><select id="weatherEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Regenmenge 24 h (mm)</span><input id="weatherRainMm" type="number" min="0.1" max="100" step="0.1"></label><label class="field"><span>Regenwahrscheinlichkeit (%)</span><input id="weatherPop" type="number" min="1" max="100"></label><div class="field"><span>&nbsp;</span><div><button class="secondary" onclick="cancelWeatherSettings()">Abbrechen</button> <button onclick="saveWeatherSettings()">Speichern</button></div></div></div><div id="weatherSaveState" class="saveState"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Smart Control <span id="smartDirtyMark" class="dirtyMark"></span></div><div class="big">Saison & Urlaub</div></div><span id="vacationState" class="badge">--</span></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Saisonfaktor (%)</span><input id="seasonPercent" type="number" min="10" max="200" step="5"></label><label class="field"><span>Urlaubsmodus</span><select id="vacationEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Start</span><input id="vacationStart" type="date"></label><label class="field"><span>Ende</span><input id="vacationEnd" type="date"></label><label class="field"><span>Bewässern alle</span><select id="vacationEvery"><option value="1">jeden Tag</option><option value="2">2 Tage</option><option value="3">3 Tage</option><option value="4">4 Tage</option><option value="5">5 Tage</option><option value="6">6 Tage</option><option value="7">7 Tage</option></select></label><label class="field"><span>Laufzeit im Urlaub (%)</span><input id="vacationPercent" type="number" min="10" max="100" step="5"></label><div class="field full"><button class="secondary" onclick="cancelSmartSettings()">Abbrechen</button> <button onclick="saveSmartSettings()">Smart-Einstellungen speichern</button></div></div><div id="smartSaveState" class="saveState"></div></section>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Bewässerungsplan</div></div><div><button onclick="newProgram()">+ Neu</button> <button class="secondary" onclick="loadAll()">Aktualisieren</button></div></div><div id="programs"></div></section>
+<section class="card nextProgram"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
+<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
+<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
 <div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
   <div class="top"><div><div class="muted">Programm</div><div id="editorTitle" class="big">Neu</div></div><button class="secondary" onclick="closeEditor()">Schließen</button></div>
   <div class="formgrid" style="margin-top:16px">
@@ -72,9 +81,175 @@ function cancelWeatherSettings(){if(lastStatus)fillWeatherForm(lastStatus);weath
 function cancelSmartSettings(){if(lastStatus)fillSmartForm(lastStatus);smartDirty=false;document.getElementById('smartDirtyMark').textContent='';setSaveState('smartSaveState','Änderungen verworfen')}
 function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markWeatherDirty);e.addEventListener('change',markWeatherDirty)});smartFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markSmartDirty);e.addEventListener('change',markSmartDirty)})}
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
-async function loadPrograms(){try{const p=await api('/api/programs');programCache=p.programs;document.getElementById('programs').innerHTML=p.programs.length?p.programs.map(x=>`<div class="program"><div class="row"><div><b>Programm ${x.id}</b> · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${x.enabled?'aktiv':'inaktiv'}</div></div><div><button class="secondary" onclick="editProgram(${x.index})">Bearbeiten</button> <button class="secondary" onclick="post('/api/program/copy',{index:${x.index}})">Kopieren</button> <button class="secondary" onclick="post('/api/program/toggle',{index:${x.index}})">${x.enabled?'Aus':'Ein'}</button> <button class="stop" onclick="deleteProgram(${x.index})">Löschen</button> <button ${(!x.enabled||p.running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div></div>`).join(''):'<div class="muted">Keine Programme vorhanden</div>'}catch(e){document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>'}}
+
+function parseControllerNow(){
+    if(!lastStatus||!lastStatus.date||!lastStatus.time)return new Date();
+    const d=lastStatus.date.split('.');
+    const t=lastStatus.time.split(':');
+    if(d.length!==3||t.length<2)return new Date();
+    return new Date(Number(d[2]),Number(d[1])-1,Number(d[0]),Number(t[0]),Number(t[1]),0,0);
+}
+
+function mondayZero(date){
+    return (date.getDay()+6)%7;
+}
+
+function dayStart(date){
+    return new Date(date.getFullYear(),date.getMonth(),date.getDate(),0,0,0,0);
+}
+
+function occurrenceForDay(program,baseDate,offset){
+    const candidate=new Date(
+        baseDate.getFullYear(),
+        baseDate.getMonth(),
+        baseDate.getDate()+offset,
+        program.hour,
+        program.minute,
+        0,
+        0
+    );
+    const bit=mondayZero(candidate);
+    return (program.weekdays&(1<<bit))!==0?candidate:null;
+}
+
+function nextOccurrence(program,now){
+    if(!program.enabled||!program.weekdays)return null;
+    const base=dayStart(now);
+    for(let offset=0;offset<8;offset++){
+        const candidate=occurrenceForDay(program,base,offset);
+        if(candidate&&candidate>now)return candidate;
+    }
+    return null;
+}
+
+function allOccurrences(now,days){
+    const result=[];
+    const base=dayStart(now);
+    programCache.filter(p=>p.enabled).forEach(program=>{
+        for(let offset=0;offset<days;offset++){
+            const candidate=occurrenceForDay(program,base,offset);
+            if(candidate&&candidate>now){
+                result.push({program,date:candidate,offset});
+            }
+        }
+    });
+    result.sort((a,b)=>a.date-b.date||a.program.id-b.program.id);
+    return result;
+}
+
+function sameCalendarDay(a,b){
+    return a.getFullYear()===b.getFullYear()&&a.getMonth()===b.getMonth()&&a.getDate()===b.getDate();
+}
+
+function whenText(date,now){
+    const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+    if(sameCalendarDay(date,now))return 'Heute';
+    if(sameCalendarDay(date,tomorrow))return 'Morgen';
+    return ['So','Mo','Di','Mi','Do','Fr','Sa'][date.getDay()];
+}
+
+function formatTime(date){
+    return String(date.getHours()).padStart(2,'0')+':'+String(date.getMinutes()).padStart(2,'0');
+}
+
+function durationUntil(date,now){
+    let minutes=Math.max(0,Math.round((date-now)/60000));
+    const days=Math.floor(minutes/1440);minutes-=days*1440;
+    const hours=Math.floor(minutes/60);minutes-=hours*60;
+    if(days>0)return `in ${days} T ${hours} Std`;
+    if(hours>0)return `in ${hours} Std ${minutes} Min`;
+    return `in ${minutes} Min`;
+}
+
+function renderNextProgram(){
+    const now=parseControllerNow();
+    const next=allOccurrences(now,8)[0];
+    const timeEl=document.getElementById('nextProgramTime');
+    const metaEl=document.getElementById('nextProgramMeta');
+    const whenEl=document.getElementById('nextProgramWhen');
+
+    if(!next){
+        timeEl.textContent='--:--';
+        metaEl.textContent='Kein aktives Programm geplant';
+        whenEl.textContent='--';
+        whenEl.className='badge off';
+        return;
+    }
+
+    timeEl.textContent=formatTime(next.date);
+    metaEl.textContent=`Programm ${next.program.id} · Ventil ${next.program.valve+1} · ${next.program.durationMinutes} min · ${durationUntil(next.date,now)}`;
+    whenEl.textContent=whenText(next.date,now);
+    whenEl.className='badge ok';
+}
+
+function scheduleItemHtml(entry){
+    const p=entry.program;
+    return `<div class="scheduleItem"><div class="scheduleTime">${formatTime(entry.date)}</div><div><b>Programm ${p.id}</b><div class="scheduleValve">Ventil ${p.valve+1} · ${p.durationMinutes} min</div></div><button class="secondary" onclick="editProgram(${p.index})">Bearbeiten</button></div>`;
+}
+
+function renderUpcomingPrograms(){
+    const target=document.getElementById('upcomingPrograms');
+    if(!target)return;
+
+    const now=parseControllerNow();
+    const tomorrow=new Date(now.getFullYear(),now.getMonth(),now.getDate()+1);
+    const occurrences=allOccurrences(now,7);
+
+    const today=occurrences.filter(x=>sameCalendarDay(x.date,now));
+    const tomorrowItems=occurrences.filter(x=>sameCalendarDay(x.date,tomorrow));
+    const later=occurrences.filter(x=>!sameCalendarDay(x.date,now)&&!sameCalendarDay(x.date,tomorrow));
+
+    const group=(title,items)=>items.length
+        ? `<div class="scheduleGroup"><div class="scheduleTitle">${title}</div>${items.map(scheduleItemHtml).join('')}</div>`
+        : '';
+
+    target.innerHTML=
+        group('Heute',today)+
+        group('Morgen',tomorrowItems)+
+        group('Später diese Woche',later) ||
+        '<div class="muted" style="margin-top:12px">Keine aktiven Programme in den nächsten sieben Tagen</div>';
+}
+
+function renderAllPrograms(running){
+    const target=document.getElementById('programs');
+    if(!target)return;
+
+    const now=parseControllerNow();
+    const sorted=[...programCache].sort((a,b)=>{
+        if(a.enabled!==b.enabled)return a.enabled?-1:1;
+        const an=nextOccurrence(a,now);
+        const bn=nextOccurrence(b,now);
+        if(an&&bn)return an-bn;
+        if(an)return -1;
+        if(bn)return 1;
+        return a.id-b.id;
+    });
+
+    target.innerHTML=sorted.length
+        ? sorted.map(x=>{
+            const next=nextOccurrence(x,now);
+            const nextText=x.enabled&&next
+                ? `Nächster Start: ${whenText(next,now)} ${formatTime(next)}`
+                : (x.enabled?'Kein Termin':'Inaktiv');
+            return `<div class="program ${x.enabled?'':'programInactive'}"><div class="row"><div><b>Programm ${x.id}</b> · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${nextText}</div></div><div><button class="secondary" onclick="editProgram(${x.index})">Bearbeiten</button> <button class="secondary" onclick="post('/api/program/copy',{index:${x.index}})">Kopieren</button> <button class="secondary" onclick="post('/api/program/toggle',{index:${x.index}})">${x.enabled?'Aus':'Ein'}</button> <button class="stop" onclick="deleteProgram(${x.index})">Löschen</button> <button ${(!x.enabled||running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div></div>`;
+          }).join('')
+        : '<div class="muted">Keine Programme vorhanden</div>';
+}
+
+async function loadPrograms(){
+    try{
+        const p=await api('/api/programs');
+        programCache=p.programs;
+        renderNextProgram();
+        renderUpcomingPrograms();
+        renderAllPrograms(p.running);
+    }catch(e){
+        document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>';
+        document.getElementById('upcomingPrograms').innerHTML='<div class="error">Zeitplan konnte nicht geladen werden</div>';
+    }
+}
 let editorIndex=-1,editorDays=127;
 const dayNames=['Mo','Di','Mi','Do','Fr','Sa','So'];
 function renderWeekdays(){document.getElementById('weekdayButtons').innerHTML=dayNames.map((n,i)=>`<button type="button" class="day ${(editorDays&(1<<i))?'active':''}" onclick="toggleEditorDay(${i})">${n}</button>`).join('')}
