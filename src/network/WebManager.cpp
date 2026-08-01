@@ -68,19 +68,31 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <script>
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,opt){const r=await fetch(url,opt);const t=await r.text();if(!r.ok)throw new Error(t||r.status);return t?JSON.parse(t):{};}
-async function post(url,data){try{const opt={method:'POST'};if(data){opt.headers={'Content-Type':'application/x-www-form-urlencoded'};opt.body=new URLSearchParams(data)}await api(url,opt);await loadAll()}catch(e){alert(e.message)}}
-async function toggleValve(index,button){
-    if(button){
-        button.disabled=true;
-        button.textContent='Schaltet…';
-    }
+async function post(url,data){
     try{
-        await api('/api/valve/toggle?index='+index,{method:'POST'});
-        await loadStatus();
-        setTimeout(loadStatus,1200);
+        const opt={method:'POST'};
+        if(data){
+            opt.headers={'Content-Type':'application/x-www-form-urlencoded'};
+            opt.body=new URLSearchParams(data);
+        }
+        await api(url,opt);
+
+        /*
+         * Nach Änderungen zuerst die Programmliste laden.
+         * Damit verwenden Zeitplan und „Nächstes Programm“
+         * niemals einen alten programCache.
+         */
+        if(url.startsWith('/api/program/')){
+            await loadPrograms();
+            await loadStatus();
+            await loadLog();
+        }else{
+            await loadStatus();
+            await loadPrograms();
+            await loadLog();
+        }
     }catch(e){
         alert(e.message);
-        await loadStatus();
     }
 }
 function badge(id,text,cls){const e=document.getElementById(id);e.textContent=text;e.className='badge '+cls}
@@ -97,7 +109,7 @@ function cancelWeatherSettings(){if(lastStatus)fillWeatherForm(lastStatus);weath
 function cancelSmartSettings(){if(lastStatus)fillSmartForm(lastStatus);smartDirty=false;document.getElementById('smartDirtyMark').textContent='';setSaveState('smartSaveState','Änderungen verworfen')}
 function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markWeatherDirty);e.addEventListener('change',markWeatherDirty)});smartFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markSmartDirty);e.addEventListener('change',markSmartDirty)})}
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -346,7 +358,16 @@ async function clearLog(){
   if(!confirm('Ereignisprotokoll wirklich löschen?'))return;
   try{await api('/api/log/clear',{method:'POST'});await loadLog()}catch(e){alert(e.message)}
 }
-async function loadAll(){await Promise.all([loadStatus(),loadPrograms(),loadLog()])}bindSettingsForms();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);
+async function loadAll(){
+    /*
+     * Bewusst nacheinander statt parallel:
+     * loadPrograms() aktualisiert programCache und zeichnet danach
+     * Zeitplan sowie das nächste Programm neu.
+     */
+    await loadStatus();
+    await loadPrograms();
+    await loadLog();
+}bindSettingsForms();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);
 </script>
 </body></html>
 )HTML";
