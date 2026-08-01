@@ -6,10 +6,12 @@
 
 #include "app/WeatherConfig.h"
 #include "time/TimeManager.h"
+#include "settings/SettingsManager.h"
 
-void WeatherManager::begin(TimeManager& timeManager)
+void WeatherManager::begin(TimeManager& timeManager, SettingsManager& settingsManager)
 {
     timeManager_ = &timeManager;
+    settingsManager_ = &settingsManager;
     preferences_.begin("weather", false);
     loadSettings();
 
@@ -121,9 +123,9 @@ bool WeatherManager::fetchForecast()
     String url;
     url.reserve(240);
     url = "https://api.openweathermap.org/data/2.5/forecast?lat=";
-    url += String(WeatherConfig::LATITUDE, 5);
+    url += String(settingsManager_ ? settingsManager_->latitude() : WeatherConfig::LATITUDE, 5);
     url += "&lon=";
-    url += String(WeatherConfig::LONGITUDE, 5);
+    url += String(settingsManager_ ? settingsManager_->longitude() : WeatherConfig::LONGITUDE, 5);
     url += "&appid=";
     url += WeatherConfig::API_KEY;
     url += "&units=metric&lang=de";

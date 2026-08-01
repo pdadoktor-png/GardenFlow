@@ -1,5 +1,6 @@
 #include "time/TimeManager.h"
 #include "app/AppConfig.h"
+#include "settings/SettingsManager.h"
 #include <WiFi.h>
 #include <cstring>
 #include "log/LogManager.h"
@@ -25,8 +26,9 @@ time_t compileEpoch() {
 }
 }
 
-void TimeManager::begin() {
-    setenv("TZ", AppConfig::TZ_INFO, 1);
+void TimeManager::begin(SettingsManager& settingsManager) {
+    settingsManager_ = &settingsManager;
+    setenv("TZ", settingsManager_->timezone().c_str(), 1);
     tzset();
 
     fallbackEpoch_ = compileEpoch();
@@ -41,7 +43,7 @@ void TimeManager::begin() {
     Serial.println("TimeManager initialisiert");
 
     if (!credentialsConfigured()) {
-        Serial.println("WLAN nicht konfiguriert: WIFI_SSID/WIFI_PASSWORD in include/app/AppConfig.h eintragen");
+        Serial.println("WLAN nicht konfiguriert: Zugangsdaten im Web-Setup eintragen");
         return;
     }
 
@@ -86,15 +88,21 @@ void TimeManager::update() {
 }
 
 bool TimeManager::credentialsConfigured() const {
-    return AppConfig::WIFI_SSID[0] != '\0' &&
-           strcmp(AppConfig::WIFI_SSID, "DEIN_WLAN") != 0;
+    return settingsManager_ != nullptr &&
+           settingsManager_->credentialsConfigured();
 }
 
 void TimeManager::startWifi() {
     lastWifiAttemptMs_ = millis();
-    Serial.printf("Verbinde mit WLAN: %s\n", AppConfig::WIFI_SSID);
+    Serial.printf(
+        "Verbinde mit WLAN: %s\n",
+        settingsManager_->wifiSsid().c_str()
+    );
     WiFi.disconnect(false, false);
-    WiFi.begin(AppConfig::WIFI_SSID, AppConfig::WIFI_PASSWORD);
+    WiFi.begin(
+        settingsManager_->wifiSsid().c_str(),
+        settingsManager_->wifiPassword().c_str()
+    );
 }
 
 void TimeManager::startNtp() {
@@ -102,7 +110,7 @@ void TimeManager::startNtp() {
     ntpStartedMs_ = millis();
     Serial.println("NTP-Synchronisierung gestartet");
     configTzTime(
-        AppConfig::TZ_INFO,
+        settingsManager_->timezone().c_str(),
         AppConfig::NTP_SERVER_1,
         AppConfig::NTP_SERVER_2,
         AppConfig::NTP_SERVER_3
@@ -132,7 +140,7 @@ uint8_t TimeManager::weekdayMondayZero() const { struct tm t = {}; getLocalTime(
 void TimeManager::formatTime(char* b, size_t s) const { struct tm t = {}; getLocalTime(t); strftime(b, s, "%H:%M", &t); }
 void TimeManager::formatDate(char* b, size_t s) const { struct tm t = {}; getLocalTime(t); strftime(b, s, "%d.%m.%Y", &t); }
 
-String TimeManager::wifiSsid() const { return isWifiConnected() ? WiFi.SSID() : String(AppConfig::WIFI_SSID); }
+String TimeManager::wifiSsid() const { return isWifiConnected() ? WiFi.SSID() : (settingsManager_ ? settingsManager_->wifiSsid() : String()); }
 String TimeManager::ipAddress() const { return isWifiConnected() ? WiFi.localIP().toString() : String("--"); }
 int32_t TimeManager::wifiRssi() const { return isWifiConnected() ? WiFi.RSSI() : 0; }
 time_t TimeManager::lastSyncEpoch() const { return lastSyncEpoch_; }

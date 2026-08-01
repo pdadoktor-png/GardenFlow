@@ -4,11 +4,12 @@
 #include <Preferences.h>
 
 class TimeManager;
+class SettingsManager;
 
 class WeatherManager
 {
 public:
-    void begin(TimeManager& timeManager);
+    void begin(TimeManager& timeManager, SettingsManager& settingsManager);
     void update();
     bool refreshNow();
 
@@ -34,6 +35,7 @@ public:
 
 private:
     TimeManager* timeManager_ = nullptr;
+    SettingsManager* settingsManager_ = nullptr;
     Preferences preferences_;
     uint32_t lastAttemptMs_ = 0;
     time_t lastUpdateEpoch_ = 0;

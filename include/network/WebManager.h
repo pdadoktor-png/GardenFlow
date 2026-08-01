@@ -9,6 +9,7 @@ class ValveManager;
 class TimeManager;
 class WeatherManager;
 class SmartControlManager;
+class SettingsManager;
 
 class WebManager
 {
@@ -18,7 +19,8 @@ public:
                ValveManager& valveManager,
                TimeManager& timeManager,
                WeatherManager& weatherManager,
-               SmartControlManager& smartControlManager);
+               SmartControlManager& smartControlManager,
+               SettingsManager& settingsManager);
     void update();
     bool isStarted() const;
 
@@ -30,9 +32,11 @@ private:
     TimeManager* timeManager_ = nullptr;
     WeatherManager* weatherManager_ = nullptr;
     SmartControlManager* smartControlManager_ = nullptr;
+    SettingsManager* settingsManager_ = nullptr;
     bool started_ = false;
     bool otaStarted_ = false;
     bool wifiWasConnected_ = false;
+    uint32_t restartRequestedAtMs_ = 0;
 
     void startServices();
     void configureRoutes();
@@ -54,6 +58,9 @@ private:
     void handleSmartSettings();
     void handleLog();
     void handleLogClear();
+    void handleSetupSettings();
+    void handleSetupSave();
+    void handleSetupPortalStart();
     void handleNotFound();
 
     void sendJson(int code, const String& body);

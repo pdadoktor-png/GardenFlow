@@ -11,6 +11,7 @@
 #include "weather/WeatherManager.h"
 #include "smart/SmartControlManager.h"
 #include "log/LogManager.h"
+#include "settings/SettingsManager.h"
 
 namespace
 {
@@ -36,6 +37,10 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .scheduleItem{display:grid;grid-template-columns:74px 1fr auto;gap:10px;align-items:center;border-top:1px solid #314138;padding:10px 0}
 .scheduleItem:first-child{border-top:0}.scheduleTime{font-size:1.1rem;font-weight:850}.scheduleValve{font-size:.8rem;color:#a8b7ad}
 .programInactive{opacity:.55}
+.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
+.setupGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
+@media(max-width:620px){.setupGrid{grid-template-columns:1fr}}
+
 
 .modal{display:none;position:fixed;inset:0;background:#000a;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.open{display:flex}.dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:#18231d;border:1px solid #3b5143;border-radius:16px;padding:18px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}input,select{border:1px solid #46594c;border-radius:9px;background:#101714;color:#edf5ef;padding:10px;font-size:1rem}.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{padding:9px 4px;background:#33463a;color:#edf5ef}.day.active{background:#7fda98;color:#102016}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.saveState{min-height:1.4em;margin-top:10px;color:#a8b7ad}.saveState.okmsg{color:#7fda98}.saveState.errmsg{color:#ff9e98}.dirtyMark{color:#ffd27a;font-weight:700}.logTools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.logList{margin-top:10px;max-height:420px;overflow:auto;border:1px solid #304237;border-radius:10px}.logRow{display:grid;grid-template-columns:150px 90px 1fr;gap:8px;padding:8px 10px;border-top:1px solid #2b3a31;font-size:.88rem}.logRow:first-child{border-top:0}.logRow.warning{background:#5a451f55}.logRow.error{background:#66312d66}.logCategory{color:#9fb2a5}.logMessage{word-break:break-word}@media(max-width:620px){.logRow{grid-template-columns:1fr}.logCategory{font-size:.78rem}}@media(max-width:540px){.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.weekdays{grid-template-columns:repeat(4,1fr)}}
 </style>
@@ -53,6 +58,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <section class="card nextProgram"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
+<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Setup</div><div class="big">WLAN und Standort</div></div><span id="setupState" class="badge">--</span></div><div class="setupGrid"><label class="field"><span>WLAN-Name (SSID)</span><input id="setupSsid" maxlength="32" autocomplete="off"></label><label class="field"><span>WLAN-Passwort</span><input id="setupPassword" type="password" placeholder="leer = unverändert" autocomplete="new-password"></label><label class="field"><span>Breitengrad</span><input id="setupLatitude" type="number" min="-90" max="90" step="0.00001"></label><label class="field"><span>Längengrad</span><input id="setupLongitude" type="number" min="-180" max="180" step="0.00001"></label><label class="field full"><span>Zeitzone (POSIX)</span><input id="setupTimezone" value="CET-1CEST,M3.5.0/2,M10.5.0/3"></label></div><div class="setupNote">Deutschland: Der voreingestellte Zeitzonenwert berücksichtigt Sommer- und Winterzeit automatisch. Nach dem Speichern startet GardenFlow neu.</div><div style="margin-top:12px"><button onclick="saveSetup()">WLAN und Standort speichern</button> <button class="secondary" onclick="startSetupPortal()">Setup-Portal starten</button></div><div id="setupSaveState" class="saveState"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Diagnose</div><div class="big">Ereignisprotokoll</div></div><span id="logCount" class="badge">0</span></div><div class="logTools"><select id="logFilter" onchange="renderLog()"><option value="">Alle Kategorien</option><option>System</option><option>WLAN</option><option>Zeit</option><option>Wetter</option><option>Programm</option><option>Ventil</option><option>Scheduler</option><option>Fehler</option></select><input id="logSearch" placeholder="Suchen" oninput="renderLog()"><button class="secondary" onclick="loadLog()">Aktualisieren</button><button class="stop" onclick="clearLog()">Löschen</button></div><div id="logList" class="logList"><div class="muted" style="padding:10px">Protokoll wird geladen …</div></div></section>
 <div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
   <div class="top"><div><div class="muted">Programm</div><div id="editorTitle" class="big">Neu</div></div><button class="secondary" onclick="closeEditor()">Schließen</button></div>
@@ -95,6 +101,17 @@ async function post(url,data){
         alert(e.message);
     }
 }
+async function toggleValve(index,button){
+    if(button){button.disabled=true;button.textContent='Schaltet…';}
+    try{
+        await api('/api/valve/toggle?index='+index,{method:'POST'});
+        await loadStatus();
+        setTimeout(loadStatus,1200);
+    }catch(e){
+        alert(e.message);
+        await loadStatus();
+    }
+}
 function badge(id,text,cls){const e=document.getElementById(id);e.textContent=text;e.className='badge '+cls}
 function dateKeyToInput(v){const s=String(v||0).padStart(8,'0');return v?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`:''}
 let weatherDirty=false,smartDirty=false,lastStatus=null;
@@ -109,7 +126,7 @@ function cancelWeatherSettings(){if(lastStatus)fillWeatherForm(lastStatus);weath
 function cancelSmartSettings(){if(lastStatus)fillSmartForm(lastStatus);smartDirty=false;document.getElementById('smartDirtyMark').textContent='';setSaveState('smartSaveState','Änderungen verworfen')}
 function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markWeatherDirty);e.addEventListener('change',markWeatherDirty)});smartFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markSmartDirty);e.addEventListener('change',markSmartDirty)})}
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.open?'ok':'off'}">${v.open?'OFFEN':'ZU'}</span> <button class="secondary" ${s.running?'disabled':''} onclick="post('/api/valve/toggle?index=${v.index}')">Impuls</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -358,6 +375,58 @@ async function clearLog(){
   if(!confirm('Ereignisprotokoll wirklich löschen?'))return;
   try{await api('/api/log/clear',{method:'POST'});await loadLog()}catch(e){alert(e.message)}
 }
+let setupLoaded=false;
+async function loadSetup(){
+    try{
+        const s=await api('/api/setup/settings');
+        document.getElementById('setupSsid').value=s.ssid||'';
+        document.getElementById('setupLatitude').value=Number(s.latitude).toFixed(5);
+        document.getElementById('setupLongitude').value=Number(s.longitude).toFixed(5);
+        document.getElementById('setupTimezone').value=s.timezone||'CET-1CEST,M3.5.0/2,M10.5.0/3';
+        document.getElementById('setupPassword').value='';
+        badge('setupState',s.passwordConfigured?'konfiguriert':'Passwort fehlt',s.passwordConfigured?'ok':'warn');
+        setupLoaded=true;
+    }catch(e){
+        setSaveState('setupSaveState','Setup konnte nicht geladen werden: '+e.message,'errmsg');
+    }
+}
+async function startSetupPortal(){
+    if(!confirm('Setup-Portal starten? GardenFlow startet neu und wechselt in das WLAN GardenFlow-Setup.'))return;
+    try{
+        setSaveState('setupSaveState','Setup-Portal wird gestartet …');
+        await api('/api/setup/portal/start',{method:'POST'});
+        setSaveState('setupSaveState','Neustart läuft. Danach mit GardenFlow-Setup verbinden.','okmsg');
+    }catch(e){
+        setSaveState('setupSaveState','Fehler: '+e.message,'errmsg');
+    }
+}
+async function saveSetup(){
+    try{
+        const latitude=Number(document.getElementById('setupLatitude').value);
+        const longitude=Number(document.getElementById('setupLongitude').value);
+        const ssid=document.getElementById('setupSsid').value.trim();
+        const timezone=document.getElementById('setupTimezone').value.trim();
+        if(!ssid||!Number.isFinite(latitude)||latitude<-90||latitude>90||!Number.isFinite(longitude)||longitude<-180||longitude>180||!timezone){
+            setSaveState('setupSaveState','Bitte gültige WLAN- und Standortdaten eingeben','errmsg');
+            return;
+        }
+        setSaveState('setupSaveState','Speichern; GardenFlow startet neu …');
+        await api('/api/setup/save',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:new URLSearchParams({
+                ssid:ssid,
+                password:document.getElementById('setupPassword').value,
+                latitude:latitude,
+                longitude:longitude,
+                timezone:timezone
+            })
+        });
+        setSaveState('setupSaveState','Gespeichert. Neustart läuft …','okmsg');
+    }catch(e){
+        setSaveState('setupSaveState','Fehler: '+e.message,'errmsg');
+    }
+}
 async function loadAll(){
     /*
      * Bewusst nacheinander statt parallel:
@@ -367,7 +436,7 @@ async function loadAll(){
     await loadStatus();
     await loadPrograms();
     await loadLog();
-}bindSettingsForms();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);
+}bindSettingsForms();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);
 </script>
 </body></html>
 )HTML";
@@ -378,7 +447,8 @@ void WebManager::begin(Scheduler& scheduler,
                        ValveManager& valveManager,
                        TimeManager& timeManager,
                        WeatherManager& weatherManager,
-                       SmartControlManager& smartControlManager)
+                       SmartControlManager& smartControlManager,
+                       SettingsManager& settingsManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
@@ -386,6 +456,7 @@ void WebManager::begin(Scheduler& scheduler,
     timeManager_ = &timeManager;
     weatherManager_ = &weatherManager;
     smartControlManager_ = &smartControlManager;
+    settingsManager_ = &settingsManager;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
@@ -419,6 +490,12 @@ void WebManager::update()
     if (otaStarted_)
     {
         ArduinoOTA.handle();
+    }
+
+    if (restartRequestedAtMs_ != 0 &&
+        static_cast<uint32_t>(millis() - restartRequestedAtMs_) >= 1200UL)
+    {
+        ESP.restart();
     }
 }
 
@@ -462,6 +539,9 @@ void WebManager::configureRoutes()
     server_.on("/api/smart/settings", HTTP_POST, [this]() { handleSmartSettings(); });
     server_.on("/api/log", HTTP_GET, [this]() { handleLog(); });
     server_.on("/api/log/clear", HTTP_POST, [this]() { handleLogClear(); });
+    server_.on("/api/setup/settings", HTTP_GET, [this]() { handleSetupSettings(); });
+    server_.on("/api/setup/save", HTTP_POST, [this]() { handleSetupSave(); });
+    server_.on("/api/setup/portal/start", HTTP_POST, [this]() { handleSetupPortalStart(); });
     server_.onNotFound([this]() { handleNotFound(); });
 }
 
@@ -990,6 +1070,97 @@ void WebManager::handleLogClear()
     Log.clear();
     Log.info(LogManager::Category::System, "Ereignisprotokoll gelöscht");
     sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleSetupSettings()
+{
+    if (!settingsManager_)
+    {
+        sendJson(503, "{\"error\":\"Setup nicht bereit\"}");
+        return;
+    }
+
+    String body;
+    body.reserve(320);
+    body += F("{\"ssid\":\"");
+    body += jsonEscape(settingsManager_->wifiSsid());
+    body += F("\",\"passwordConfigured\":");
+    body += settingsManager_->wifiPassword().length() > 0
+        ? F("true")
+        : F("false");
+    body += F(",\"latitude\":");
+    body += String(settingsManager_->latitude(), 5);
+    body += F(",\"longitude\":");
+    body += String(settingsManager_->longitude(), 5);
+    body += F(",\"timezone\":\"");
+    body += jsonEscape(settingsManager_->timezone());
+    body += F("\"}");
+
+    sendJson(200, body);
+}
+
+void WebManager::handleSetupSave()
+{
+    if (!settingsManager_)
+    {
+        sendJson(503, "{\"error\":\"Setup nicht bereit\"}");
+        return;
+    }
+
+    if (!server_.hasArg("ssid") ||
+        !server_.hasArg("latitude") ||
+        !server_.hasArg("longitude") ||
+        !server_.hasArg("timezone"))
+    {
+        sendJson(400, "{\"error\":\"Setup-Daten fehlen\"}");
+        return;
+    }
+
+    const String password =
+        server_.hasArg("password")
+            ? server_.arg("password")
+            : String();
+
+    const bool saved = settingsManager_->saveNetworkLocation(
+        server_.arg("ssid"),
+        password,
+        server_.arg("latitude").toFloat(),
+        server_.arg("longitude").toFloat(),
+        server_.arg("timezone")
+    );
+
+    if (!saved)
+    {
+        sendJson(400, "{\"error\":\"Ungueltige WLAN- oder Standortdaten\"}");
+        return;
+    }
+
+    Log.info(
+        LogManager::Category::System,
+        "WLAN- und Standort-Setup gespeichert; Neustart"
+    );
+
+    restartRequestedAtMs_ = millis();
+    sendJson(200, "{\"ok\":true,\"restart\":true}");
+}
+
+void WebManager::handleSetupPortalStart()
+{
+    if (!settingsManager_)
+    {
+        sendJson(503, "{\"error\":\"Setup nicht bereit\"}");
+        return;
+    }
+
+    settingsManager_->requestSetupPortal(true);
+
+    Log.info(
+        LogManager::Category::System,
+        "Setup-Portal manuell angefordert; Neustart"
+    );
+
+    restartRequestedAtMs_ = millis();
+    sendJson(200, "{\"ok\":true,\"restart\":true}");
 }
 
 void WebManager::handleNotFound()

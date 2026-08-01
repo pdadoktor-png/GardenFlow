@@ -11,6 +11,8 @@
 #include "weather/WeatherManager.h"
 #include "smart/SmartControlManager.h"
 #include "log/LogManager.h"
+#include "settings/SettingsManager.h"
+#include "setup/SetupPortal.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -20,6 +22,8 @@ static TimeManager timeManager;
 static WebManager webManager;
 static WeatherManager weatherManager;
 static SmartControlManager smartControlManager;
+static SettingsManager settingsManager;
+static SetupPortal setupPortal;
 
 void setup()
 {
@@ -32,43 +36,80 @@ void setup()
     Serial.println("ESP32-4827S043R");
     Serial.println("================================");
 
+    settingsManager.begin();
+    setupPortal.begin(settingsManager);
     valveManager.begin();
     scheduler.begin();
-    timeManager.begin();
-    runtimeManager.begin(scheduler, valveManager, timeManager);
-    weatherManager.begin(timeManager);
-    smartControlManager.begin();
-    runtimeManager.setWeatherManager(weatherManager);
-    runtimeManager.setSmartControlManager(smartControlManager);
-    
-    displayManager.begin(
-        valveManager,
-        scheduler,
-        runtimeManager,
-        timeManager);
 
-    webManager.begin(
-        scheduler,
-        runtimeManager,
-        valveManager,
-        timeManager,
-        weatherManager,
-        smartControlManager);
 
-    Log.begin(&timeManager);
-    Log.info(LogManager::Category::System, "GardenFlow gestartet");
+    if (setupPortal.isActive())
+    {
+        Serial.println(
+            "Setupbetrieb: normaler WLAN- und Webbetrieb pausiert"
+        );
+    }
+    else
+    {
+        timeManager.begin(settingsManager);
+
+        runtimeManager.begin(
+            scheduler,
+            valveManager,
+            timeManager
+        );
+
+        weatherManager.begin(
+            timeManager,
+            settingsManager
+        );
+
+        smartControlManager.begin();
+
+        runtimeManager.setWeatherManager(
+            weatherManager
+        );
+
+        runtimeManager.setSmartControlManager(
+            smartControlManager
+        );
+
+        webManager.begin(
+            scheduler,
+            runtimeManager,
+            valveManager,
+            timeManager,
+            weatherManager,
+            smartControlManager,
+            settingsManager
+        );
+
+        Log.begin(&timeManager);
+        Log.info(
+            LogManager::Category::System,
+            "GardenFlow gestartet"
+        );
+    }
+
     Serial.println("System bereit");
-}
+    
+
+  }
 
 void loop()
 {
     valveManager.update();
-    scheduler.update();
+
+    if (setupPortal.isActive())
+    {
+        setupPortal.update();
+        delay(2);
+        return;
+    }
+
     timeManager.update();
-    weatherManager.update();
     runtimeManager.update();
-    displayManager.update();
+    weatherManager.update();
     webManager.update();
 
-    delay(5);
+    delay(2);
 }

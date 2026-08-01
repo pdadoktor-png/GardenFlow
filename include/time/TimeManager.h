@@ -2,9 +2,11 @@
 #include <Arduino.h>
 #include <time.h>
 
+class SettingsManager;
+
 class TimeManager {
 public:
-    void begin();
+    void begin(SettingsManager& settingsManager);
     void update();
 
     // true only after a real NTP synchronization
@@ -25,6 +27,7 @@ public:
     time_t lastSyncEpoch() const;
 
 private:
+    SettingsManager* settingsManager_ = nullptr;
     time_t fallbackEpoch_ = 0;
     uint32_t fallbackStartedMs_ = 0;
     uint32_t lastWifiAttemptMs_ = 0;
