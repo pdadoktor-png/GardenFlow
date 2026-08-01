@@ -4,6 +4,7 @@
 #include "time/TimeManager.h"
 #include "weather/WeatherManager.h"
 #include "smart/SmartControlManager.h"
+#include "log/LogManager.h"
 
 void RuntimeManager::begin(Scheduler& s, ValveManager& v, TimeManager& t){scheduler_=&s;valveManager_=&v;timeManager_=&t;clearState();Serial.println("RuntimeManager initialisiert");}
 void RuntimeManager::setWeatherManager(WeatherManager& weatherManager){weatherManager_=&weatherManager;}
@@ -13,7 +14,7 @@ void RuntimeManager::update(){
     if(!isRunning()) return;
     const uint32_t elapsed=(millis()-startedAtMs_)/1000UL;
     if(elapsed<durationSeconds_ || valveManager_->channel(valveIndex_).pulseActive) return;
-    if(valveManager_->pulse(valveIndex_)){Serial.printf("Programmlauf beendet, Ventil %u wird geschlossen\n",valveIndex_+1);clearState();}
+    if(valveManager_->pulse(valveIndex_)){Log.addf(LogManager::Category::Program,LogManager::Level::Info,"Programmlauf beendet; Ventil %u wird geschlossen",valveIndex_+1);clearState();}
 }
 void RuntimeManager::checkAutomaticStart(){
     if(isRunning()||!timeManager_||!timeManager_->isValid()) return;
@@ -25,12 +26,7 @@ void RuntimeManager::checkAutomaticStart(){
     lastCheckedDayKey_=dayKey; lastCheckedMinute_=minute;
     const uint8_t wd=timeManager_->weekdayMondayZero();
     for(uint8_t i=0;i<Scheduler::MAX_PROGRAMS;++i){
-        if(!scheduler_->isProgramUsed(i)) 
-        {
-            continue;
-        } 
-        const auto&p=scheduler_->program(i);
-        
+        if(!scheduler_->isProgramUsed(i)) continue; const auto&p=scheduler_->program(i);
         if(!p.enabled || !(p.weekdays&(1U<<wd)) || p.startHour!=t.tm_hour || p.startMinute!=t.tm_min) continue;
         if(lastStartedProgramId_==p.id && lastStartedDayKey_==dayKey && lastStartedMinute_==minute) continue;
         if(startProgram(i,true)){lastStartedProgramId_=p.id;lastStartedDayKey_=dayKey;lastStartedMinute_=minute;} break;
@@ -40,29 +36,11 @@ bool RuntimeManager::startProgram(uint8_t i,bool automatic){
     if(!scheduler_||!valveManager_||isRunning()||!scheduler_->isProgramUsed(i)||!allValvesIdleAndClosed()) return false;
     const auto&p=scheduler_->program(i); if(p.valveIndex>=Scheduler::VALVE_COUNT||p.durationSeconds==0||!valveManager_->pulse(p.valveIndex)) return false;
     uint32_t effectiveDuration=p.durationSeconds;
-    if (automatic && smartControlManager_ && timeManager_)
-    {
-        struct tm local = {};
-
-        if (timeManager_->getLocalTime(local))
-        {
-            effectiveDuration = static_cast<uint32_t>(
-                (
-                    static_cast<uint64_t>(effectiveDuration) *
-                    smartControlManager_->automaticDurationPercent(local)
-                ) / 100ULL
-            );
-
-            if (effectiveDuration < 60U)
-            {
-                effectiveDuration = 60U;
-            }
-        }
-    }
+    if(automatic && smartControlManager_ && timeManager_){struct tm local={};if(timeManager_->getLocalTime(local)){effectiveDuration=static_cast<uint32_t>((static_cast<uint64_t>(effectiveDuration)*smartControlManager_->automaticDurationPercent(local))/100ULL);if(effectiveDuration<60U){effectiveDuration=60U;}}}
     runningProgramIndex_=i;startedAtMs_=millis();durationSeconds_=effectiveDuration;valveIndex_=p.valveIndex;automaticRun_=automatic;
-    Serial.printf("Programm %lu %s gestartet: Ventil %u, %lu Sekunden\n",(unsigned long)p.id,automatic?"automatisch":"manuell",p.valveIndex+1,(unsigned long)durationSeconds_);return true;
+    Log.addf(LogManager::Category::Program,LogManager::Level::Info,"Programm %lu %s gestartet: Ventil %u, %lu Sekunden",(unsigned long)p.id,automatic?"automatisch":"manuell",p.valveIndex+1,(unsigned long)durationSeconds_);return true;
 }
-bool RuntimeManager::stop(){if(!isRunning()||valveManager_->channel(valveIndex_).pulseActive||!valveManager_->pulse(valveIndex_))return false;Serial.printf("Programmlauf abgebrochen, Ventil %u wird geschlossen\n",valveIndex_+1);clearState();return true;}
+bool RuntimeManager::stop(){if(!isRunning()||valveManager_->channel(valveIndex_).pulseActive||!valveManager_->pulse(valveIndex_))return false;Log.addf(LogManager::Category::Program,LogManager::Level::Warning,"Programmlauf abgebrochen; Ventil %u wird geschlossen",valveIndex_+1);clearState();return true;}
 bool RuntimeManager::isRunning()const{return scheduler_&&valveManager_&&runningProgramIndex_>=0&&runningProgramIndex_<Scheduler::MAX_PROGRAMS;}
 bool RuntimeManager::isProgramRunning(uint8_t i)const{return isRunning()&&runningProgramIndex_==i;}
 bool RuntimeManager::isAutomaticRun()const{return isRunning()&&automaticRun_;}

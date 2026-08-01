@@ -1,4 +1,5 @@
 #include "ValveManager.h"
+#include "log/LogManager.h"
 
 void ValveManager::begin()
 {
@@ -61,7 +62,7 @@ bool ValveManager::pulse(uint8_t index)
 
     setOutput(ch, true);
     notify(index);
-    Serial.printf("%s: Impuls gestartet\n", ch.name);
+    Log.addf(LogManager::Category::Valve, LogManager::Level::Info, "%s: Impuls gestartet", ch.name);
     return true;
 }
 
@@ -108,9 +109,7 @@ void ValveManager::finishPulse(uint8_t index)
     ch.assumedOpen = !ch.assumedOpen;
     notify(index);
 
-    Serial.printf("%s: Impuls beendet, Zustand = %s\n",
-                  ch.name,
-                  ch.assumedOpen ? "OFFEN" : "GESCHLOSSEN");
+    Log.addf(LogManager::Category::Valve, LogManager::Level::Info, "%s: Impuls beendet, Zustand = %s", ch.name, ch.assumedOpen ? "OFFEN" : "GESCHLOSSEN");
 }
 
 bool ValveManager::validIndex(uint8_t index) const

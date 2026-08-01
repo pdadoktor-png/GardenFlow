@@ -2,6 +2,7 @@
 #include "app/AppConfig.h"
 #include <WiFi.h>
 #include <cstring>
+#include "log/LogManager.h"
 
 namespace {
 constexpr time_t MIN_VALID_EPOCH = 1700000000; // 14.11.2023
@@ -52,14 +53,14 @@ void TimeManager::update() {
 
     if (connected && !wifiWasConnected_) {
         wifiWasConnected_ = true;
-        Serial.printf("WLAN verbunden: %s\n", WiFi.SSID().c_str());
-        Serial.printf("IP-Adresse: %s\n", WiFi.localIP().toString().c_str());
+        Log.addf(LogManager::Category::Wifi, LogManager::Level::Info, "WLAN verbunden: %s", WiFi.SSID().c_str());
+        Log.addf(LogManager::Category::Wifi, LogManager::Level::Info, "IP-Adresse: %s", WiFi.localIP().toString().c_str());
         Serial.printf("Signalstaerke: %ld dBm\n", static_cast<long>(WiFi.RSSI()));
         startNtp();
     } else if (!connected && wifiWasConnected_) {
         wifiWasConnected_ = false;
         ntpConfigured_ = false;
-        Serial.println("WLAN-Verbindung verloren");
+        Log.warning(LogManager::Category::Wifi, "WLAN-Verbindung verloren");
     }
 
     if (!connected && credentialsConfigured() && millis() - lastWifiAttemptMs_ >= WIFI_RETRY_MS) {
@@ -75,8 +76,8 @@ void TimeManager::update() {
             localtime_r(&systemNow, &local);
             char text[40];
             strftime(text, sizeof(text), "%d.%m.%Y %H:%M:%S", &local);
-            Serial.printf("Systemzeit synchronisiert: %s\n", text);
-            Serial.println("Automatik freigegeben");
+            Log.addf(LogManager::Category::Time, LogManager::Level::Info, "Systemzeit synchronisiert: %s", text);
+            Log.info(LogManager::Category::Scheduler, "Automatik freigegeben");
         }
     } else if (connected && ntpConfigured_ && millis() - ntpStartedMs_ > STATUS_LOG_MS && millis() - lastStatusLogMs_ > STATUS_LOG_MS) {
         lastStatusLogMs_ = millis();

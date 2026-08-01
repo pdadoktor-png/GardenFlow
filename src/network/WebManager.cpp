@@ -10,6 +10,7 @@
 #include "time/TimeManager.h"
 #include "weather/WeatherManager.h"
 #include "smart/SmartControlManager.h"
+#include "log/LogManager.h"
 
 namespace
 {
@@ -36,7 +37,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .scheduleItem:first-child{border-top:0}.scheduleTime{font-size:1.1rem;font-weight:850}.scheduleValve{font-size:.8rem;color:#a8b7ad}
 .programInactive{opacity:.55}
 
-.modal{display:none;position:fixed;inset:0;background:#000a;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.open{display:flex}.dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:#18231d;border:1px solid #3b5143;border-radius:16px;padding:18px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}input,select{border:1px solid #46594c;border-radius:9px;background:#101714;color:#edf5ef;padding:10px;font-size:1rem}.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{padding:9px 4px;background:#33463a;color:#edf5ef}.day.active{background:#7fda98;color:#102016}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.saveState{min-height:1.4em;margin-top:10px;color:#a8b7ad}.saveState.okmsg{color:#7fda98}.saveState.errmsg{color:#ff9e98}.dirtyMark{color:#ffd27a;font-weight:700}@media(max-width:540px){.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.weekdays{grid-template-columns:repeat(4,1fr)}}
+.modal{display:none;position:fixed;inset:0;background:#000a;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.open{display:flex}.dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:#18231d;border:1px solid #3b5143;border-radius:16px;padding:18px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}input,select{border:1px solid #46594c;border-radius:9px;background:#101714;color:#edf5ef;padding:10px;font-size:1rem}.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{padding:9px 4px;background:#33463a;color:#edf5ef}.day.active{background:#7fda98;color:#102016}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.saveState{min-height:1.4em;margin-top:10px;color:#a8b7ad}.saveState.okmsg{color:#7fda98}.saveState.errmsg{color:#ff9e98}.dirtyMark{color:#ffd27a;font-weight:700}.logTools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.logList{margin-top:10px;max-height:420px;overflow:auto;border:1px solid #304237;border-radius:10px}.logRow{display:grid;grid-template-columns:150px 90px 1fr;gap:8px;padding:8px 10px;border-top:1px solid #2b3a31;font-size:.88rem}.logRow:first-child{border-top:0}.logRow.warning{background:#5a451f55}.logRow.error{background:#66312d66}.logCategory{color:#9fb2a5}.logMessage{word-break:break-word}@media(max-width:620px){.logRow{grid-template-columns:1fr}.logCategory{font-size:.78rem}}@media(max-width:540px){.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.weekdays{grid-template-columns:repeat(4,1fr)}}
 </style>
 </head>
 <body>
@@ -52,6 +53,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <section class="card nextProgram"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
+<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Diagnose</div><div class="big">Ereignisprotokoll</div></div><span id="logCount" class="badge">0</span></div><div class="logTools"><select id="logFilter" onchange="renderLog()"><option value="">Alle Kategorien</option><option>System</option><option>WLAN</option><option>Zeit</option><option>Wetter</option><option>Programm</option><option>Ventil</option><option>Scheduler</option><option>Fehler</option></select><input id="logSearch" placeholder="Suchen" oninput="renderLog()"><button class="secondary" onclick="loadLog()">Aktualisieren</button><button class="stop" onclick="clearLog()">Löschen</button></div><div id="logList" class="logList"><div class="muted" style="padding:10px">Protokoll wird geladen …</div></div></section>
 <div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
   <div class="top"><div><div class="muted">Programm</div><div id="editorTitle" class="big">Neu</div></div><button class="secondary" onclick="closeEditor()">Schließen</button></div>
   <div class="formgrid" style="margin-top:16px">
@@ -309,7 +311,28 @@ async function saveSmartSettings(){
         setSaveState('smartSaveState','Fehler: '+e.message,'errmsg');
     }
 }
-async function loadAll(){await Promise.all([loadStatus(),loadPrograms()])}bindSettingsForms();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);
+let logCache=[];
+async function loadLog(){
+  try{
+    const data=await api('/api/log');
+    logCache=data.entries||[];
+    document.getElementById('logCount').textContent=String(logCache.length);
+    renderLog();
+  }catch(e){
+    document.getElementById('logList').innerHTML='<div class="error" style="padding:10px">Protokoll konnte nicht geladen werden</div>';
+  }
+}
+function renderLog(){
+  const filter=document.getElementById('logFilter').value;
+  const search=document.getElementById('logSearch').value.trim().toLowerCase();
+  const rows=logCache.filter(x=>(!filter||x.category===filter)&&(!search||x.message.toLowerCase().includes(search)||x.category.toLowerCase().includes(search)));
+  document.getElementById('logList').innerHTML=rows.length?rows.map(x=>`<div class="logRow ${x.level}"><div>${esc(x.time)}</div><div class="logCategory">${esc(x.category)}</div><div class="logMessage">${esc(x.message)}</div></div>`).join(''):'<div class="muted" style="padding:10px">Keine passenden Einträge</div>';
+}
+async function clearLog(){
+  if(!confirm('Ereignisprotokoll wirklich löschen?'))return;
+  try{await api('/api/log/clear',{method:'POST'});await loadLog()}catch(e){alert(e.message)}
+}
+async function loadAll(){await Promise.all([loadStatus(),loadPrograms(),loadLog()])}bindSettingsForms();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);
 </script>
 </body></html>
 )HTML";
@@ -402,6 +425,8 @@ void WebManager::configureRoutes()
     server_.on("/api/weather/refresh", HTTP_POST, [this]() { handleWeatherRefresh(); });
     server_.on("/api/weather/settings", HTTP_POST, [this]() { handleWeatherSettings(); });
     server_.on("/api/smart/settings", HTTP_POST, [this]() { handleSmartSettings(); });
+    server_.on("/api/log", HTTP_GET, [this]() { handleLog(); });
+    server_.on("/api/log/clear", HTTP_POST, [this]() { handleLogClear(); });
     server_.onNotFound([this]() { handleNotFound(); });
 }
 
@@ -882,6 +907,53 @@ void WebManager::handleSmartSettings()
         vacationEnabled
     );
 
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleLog()
+{
+    String body;
+    body.reserve(8000);
+    body += F("{\"entries\":[");
+
+    LogManager::Entry entry;
+    const uint16_t count = Log.count();
+    for (uint16_t i = 0; i < count; ++i)
+    {
+        if (!Log.entryNewestFirst(i, entry))
+        {
+            continue;
+        }
+
+        if (i > 0)
+        {
+            body += ',';
+        }
+
+        char timestamp[24];
+        LogManager::formatTimestamp(entry, timestamp, sizeof(timestamp));
+
+        body += F("{\"sequence\":");
+        body += String(entry.sequence);
+        body += F(",\"time\":\"");
+        body += jsonEscape(String(timestamp));
+        body += F("\",\"category\":\"");
+        body += LogManager::categoryName(entry.category);
+        body += F("\",\"level\":\"");
+        body += LogManager::levelName(entry.level);
+        body += F("\",\"message\":\"");
+        body += jsonEscape(String(entry.message));
+        body += F("\"}");
+    }
+
+    body += F("]}");
+    sendJson(200, body);
+}
+
+void WebManager::handleLogClear()
+{
+    Log.clear();
+    Log.info(LogManager::Category::System, "Ereignisprotokoll gelöscht");
     sendJson(200, "{\"ok\":true}");
 }
 

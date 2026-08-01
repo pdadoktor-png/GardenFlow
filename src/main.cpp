@@ -10,6 +10,7 @@
 #include "network/WebManager.h"
 #include "weather/WeatherManager.h"
 #include "smart/SmartControlManager.h"
+#include "log/LogManager.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -54,6 +55,8 @@ void setup()
         weatherManager,
         smartControlManager);
 
+    Log.begin(&timeManager);
+    Log.info(LogManager::Category::System, "GardenFlow gestartet");
     Serial.println("System bereit");
 }
 

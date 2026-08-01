@@ -52,6 +52,8 @@ private:
     void handleWeatherRefresh();
     void handleWeatherSettings();
     void handleSmartSettings();
+    void handleLog();
+    void handleLogClear();
     void handleNotFound();
 
     void sendJson(int code, const String& body);
