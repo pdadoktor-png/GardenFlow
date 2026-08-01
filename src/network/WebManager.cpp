@@ -87,7 +87,53 @@ function newProgram(){openEditor(null)}
 function editProgram(index){openEditor(programCache.find(p=>p.index===index))}
 async function deleteProgram(index){if(confirm('Programm wirklich löschen?'))await post('/api/program/delete',{index})}
 async function saveWeatherSettings(){try{setSaveState('weatherSaveState','Speichern …');await api('/api/weather/settings',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({enabled:Number(document.getElementById('weatherEnabled').value),rainMm:Number(document.getElementById('weatherRainMm').value),probability:Number(document.getElementById('weatherPop').value)})});weatherDirty=false;document.getElementById('weatherDirtyMark').textContent='';setSaveState('weatherSaveState','Einstellungen gespeichert','okmsg');await loadStatus()}catch(e){setSaveState('weatherSaveState','Fehler: '+e.message,'errmsg')}}
-async function saveSmartSettings(){try{const start=document.getElementById('vacationStart').value.replaceAll('-','');const end=document.getElementById('vacationEnd').value.replaceAll('-','');setSaveState('smartSaveState','Speichern …');await api('/api/smart/settings',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:new URLSearchParams({season:Number(document.getElementById('seasonPercent').value),enabled:Number(document.getElementById('vacationEnabled').value),start,end,every:Number(document.getElementById('vacationEvery').value),percent:Number(document.getElementById('vacationPercent').value)})});smartDirty=false;document.getElementById('smartDirtyMark').textContent='';setSaveState('smartSaveState','Einstellungen gespeichert','okmsg');await loadStatus()}catch(e){setSaveState('smartSaveState','Fehler: '+e.message,'errmsg')}}
+function dateInputToKey(id){
+    const value=document.getElementById(id).value;
+    if(!value)return 0;
+    const parts=value.split('-');
+    if(parts.length!==3)return 0;
+    return Number(parts[0]+parts[1]+parts[2]);
+}
+async function saveSmartSettings(){
+    try{
+        const enabled=Number(document.getElementById('vacationEnabled').value);
+        const start=dateInputToKey('vacationStart');
+        const end=dateInputToKey('vacationEnd');
+
+        if(enabled){
+            if(!start||!end){
+                setSaveState('smartSaveState','Bitte Start- und Enddatum eingeben','errmsg');
+                return;
+            }
+            if(end<start){
+                setSaveState('smartSaveState','Enddatum darf nicht vor dem Startdatum liegen','errmsg');
+                return;
+            }
+        }
+
+        setSaveState('smartSaveState','Speichern …');
+
+        await api('/api/smart/settings',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:new URLSearchParams({
+                season:Number(document.getElementById('seasonPercent').value),
+                enabled:enabled,
+                start:start,
+                end:end,
+                every:Number(document.getElementById('vacationEvery').value),
+                percent:Number(document.getElementById('vacationPercent').value)
+            })
+        });
+
+        smartDirty=false;
+        document.getElementById('smartDirtyMark').textContent='';
+        setSaveState('smartSaveState','Einstellungen gespeichert','okmsg');
+        await loadStatus();
+    }catch(e){
+        setSaveState('smartSaveState','Fehler: '+e.message,'errmsg');
+    }
+}
 async function loadAll(){await Promise.all([loadStatus(),loadPrograms()])}bindSettingsForms();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);
 </script>
 </body></html>
@@ -595,45 +641,71 @@ void WebManager::handleSmartSettings()
         return;
     }
 
-    if (server_.hasArg("season"))
-        smartControlManager_->setSeasonPercent(
-            static_cast<uint8_t>(server_.arg("season").toInt())
-        );
+    const bool vacationEnabled =
+        server_.hasArg("enabled") &&
+        server_.arg("enabled").toInt() != 0;
 
-    if (server_.hasArg("enabled"))
-        smartControlManager_->setVacationEnabled(
-            server_.arg("enabled").toInt() != 0
-        );
+    const uint8_t seasonPercent =
+        server_.hasArg("season")
+            ? static_cast<uint8_t>(server_.arg("season").toInt())
+            : smartControlManager_->seasonPercent();
 
-    if (server_.hasArg("start") && server_.hasArg("end"))
+    const uint8_t intervalDays =
+        server_.hasArg("every")
+            ? static_cast<uint8_t>(server_.arg("every").toInt())
+            : smartControlManager_->vacationIntervalDays();
+
+    const uint8_t vacationPercent =
+        server_.hasArg("percent")
+            ? static_cast<uint8_t>(server_.arg("percent").toInt())
+            : smartControlManager_->vacationPercent();
+
+    uint32_t startDate = smartControlManager_->vacationStartDate();
+    uint32_t endDate = smartControlManager_->vacationEndDate();
+
+    if (server_.hasArg("start") && server_.arg("start").length() > 0)
     {
-        const uint32_t startDate =
+        startDate =
             static_cast<uint32_t>(server_.arg("start").toInt());
-        const uint32_t endDate =
-            static_cast<uint32_t>(server_.arg("end").toInt());
+    }
 
-        if (SmartControlManager::validDateKey(startDate) &&
-            SmartControlManager::validDateKey(endDate) &&
-            endDate >= startDate)
+    if (server_.hasArg("end") && server_.arg("end").length() > 0)
+    {
+        endDate =
+            static_cast<uint32_t>(server_.arg("end").toInt());
+    }
+
+    if (vacationEnabled)
+    {
+        if (!SmartControlManager::validDateKey(startDate) ||
+            !SmartControlManager::validDateKey(endDate) ||
+            endDate < startDate)
         {
-            smartControlManager_->setVacationDates(startDate, endDate);
-        }
-        else if (smartControlManager_->vacationEnabled())
-        {
-            sendJson(400, "{\"error\":\"Ungueltiger Urlaubszeitraum\"}");
+            sendJson(
+                400,
+                "{\"error\":\"Ungueltiger Urlaubszeitraum\"}"
+            );
             return;
         }
     }
 
-    if (server_.hasArg("every"))
-        smartControlManager_->setVacationIntervalDays(
-            static_cast<uint8_t>(server_.arg("every").toInt())
-        );
+    smartControlManager_->setSeasonPercent(seasonPercent);
+    smartControlManager_->setVacationIntervalDays(intervalDays);
+    smartControlManager_->setVacationPercent(vacationPercent);
 
-    if (server_.hasArg("percent"))
-        smartControlManager_->setVacationPercent(
-            static_cast<uint8_t>(server_.arg("percent").toInt())
+    if (SmartControlManager::validDateKey(startDate) &&
+        SmartControlManager::validDateKey(endDate) &&
+        endDate >= startDate)
+    {
+        smartControlManager_->setVacationDates(
+            startDate,
+            endDate
         );
+    }
+
+    smartControlManager_->setVacationEnabled(
+        vacationEnabled
+    );
 
     sendJson(200, "{\"ok\":true}");
 }
