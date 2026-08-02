@@ -5,11 +5,12 @@
 #include <WebServer.h>
 
 class SettingsManager;
+class WifiManager;
 
 class SetupPortal
 {
 public:
-    void begin(SettingsManager& settingsManager);
+    void begin(SettingsManager& settingsManager, WifiManager& wifiManager);
     void update();
 
     bool isActive() const;
@@ -20,6 +21,7 @@ private:
     static constexpr uint16_t DNS_PORT = 53;
 
     SettingsManager* settingsManager_ = nullptr;
+    WifiManager* wifiManager_ = nullptr;
     DNSServer dnsServer_;
     WebServer webServer_{80};
 

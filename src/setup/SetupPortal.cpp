@@ -1,8 +1,8 @@
 #include "setup/SetupPortal.h"
 
-#include <WiFi.h>
 
 #include "settings/SettingsManager.h"
+#include "network/WifiManager.h"
 
 constexpr uint16_t SetupPortal::DNS_PORT;
 
@@ -16,9 +16,10 @@ const IPAddress AP_GATEWAY(192, 168, 4, 1);
 const IPAddress AP_SUBNET(255, 255, 255, 0);
 }
 
-void SetupPortal::begin(SettingsManager& settingsManager)
+void SetupPortal::begin(SettingsManager& settingsManager, WifiManager& wifiManager)
 {
     settingsManager_ = &settingsManager;
+    wifiManager_ = &wifiManager;
 
     const bool requested =
         settingsManager_->setupPortalRequested();
@@ -66,13 +67,18 @@ String SetupPortal::accessPointIp() const
 
 void SetupPortal::startAccessPoint()
 {
-    WiFi.disconnect(true, false);
-    delay(100);
+    if (wifiManager_ == nullptr)
+    {
+        Serial.println("SetupPortal: WifiManager fehlt");
+        return;
+    }
 
-    WiFi.mode(WIFI_AP_STA);
-    WiFi.softAPConfig(AP_IP, AP_GATEWAY, AP_SUBNET);
-
-    if (!WiFi.softAP(AP_SSID, AP_PASSWORD))
+    if (!wifiManager_->startSetupAccessPoint(
+            AP_SSID,
+            AP_PASSWORD,
+            AP_IP,
+            AP_GATEWAY,
+            AP_SUBNET))
     {
         Serial.println("Setup-Portal konnte nicht gestartet werden");
         return;
@@ -80,9 +86,13 @@ void SetupPortal::startAccessPoint()
 
     configureRoutes();
 
-    dnsServer_.start(DNS_PORT, "*", AP_IP);
-    webServer_.begin();
+    dnsServer_.start(
+        DNS_PORT,
+        "*",
+        wifiManager_->setupAccessPointIp()
+    );
 
+    webServer_.begin();
     active_ = true;
 
     Serial.println();
@@ -90,7 +100,10 @@ void SetupPortal::startAccessPoint()
     Serial.println("GardenFlow Setup-Portal aktiv");
     Serial.printf("SSID: %s\n", AP_SSID);
     Serial.printf("Passwort: %s\n", AP_PASSWORD);
-    Serial.printf("Adresse: http://%s/\n", AP_IP.toString().c_str());
+    Serial.printf(
+        "Adresse: http://%s/\n",
+        wifiManager_->setupAccessPointIp().toString().c_str()
+    );
     Serial.println("================================");
 }
 
