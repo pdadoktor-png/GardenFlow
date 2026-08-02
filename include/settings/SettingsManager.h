@@ -11,11 +11,12 @@ public:
     const String& wifiSsid() const;
     const String& wifiPassword() const;
     const String& timezone() const;
+    const String& weatherApiKey() const;
     float latitude() const;
     float longitude() const;
 
     bool credentialsConfigured() const;
-    bool setupPortalRequested() ;
+    bool setupPortalRequested();
     void requestSetupPortal(bool requested);
 
     bool saveNetworkLocation(
@@ -23,7 +24,8 @@ public:
         const String& password,
         float latitude,
         float longitude,
-        const String& timezone
+        const String& timezone,
+        const String& weatherApiKey
     );
 
 private:
@@ -31,6 +33,7 @@ private:
     String wifiSsid_;
     String wifiPassword_;
     String timezone_;
+    String weatherApiKey_;
     float latitude_ = 0.0f;
     float longitude_ = 0.0f;
 

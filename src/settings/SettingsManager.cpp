@@ -27,6 +27,11 @@ const String& SettingsManager::timezone() const
     return timezone_;
 }
 
+const String& SettingsManager::weatherApiKey() const
+{
+    return weatherApiKey_;
+}
+
 float SettingsManager::latitude() const
 {
     return latitude_;
@@ -43,7 +48,7 @@ bool SettingsManager::credentialsConfigured() const
            wifiSsid_ != "DEIN_WLAN";
 }
 
-bool SettingsManager::setupPortalRequested() 
+bool SettingsManager::setupPortalRequested()
 {
     return preferences_.getBool("setupPortal", false);
 }
@@ -58,17 +63,21 @@ bool SettingsManager::saveNetworkLocation(
     const String& password,
     float latitude,
     float longitude,
-    const String& timezone)
+    const String& timezone,
+    const String& weatherApiKey)
 {
     String cleanSsid = ssid;
     String cleanTimezone = timezone;
+    String cleanWeatherApiKey = weatherApiKey;
     cleanSsid.trim();
     cleanTimezone.trim();
+    cleanWeatherApiKey.trim();
 
     if (cleanSsid.length() == 0 ||
         cleanSsid.length() > 32 ||
         cleanTimezone.length() == 0 ||
         cleanTimezone.length() > 96 ||
+        cleanWeatherApiKey.length() > 64 ||
         !std::isfinite(latitude) ||
         !std::isfinite(longitude) ||
         latitude < -90.0f ||
@@ -91,11 +100,18 @@ bool SettingsManager::saveNetworkLocation(
     longitude_ = longitude;
     timezone_ = cleanTimezone;
 
+    // Leeres API-Key-Feld bedeutet: vorhandenen Schlüssel behalten.
+    if (cleanWeatherApiKey.length() > 0)
+    {
+        weatherApiKey_ = cleanWeatherApiKey;
+    }
+
     preferences_.putString("ssid", wifiSsid_);
     preferences_.putString("password", wifiPassword_);
     preferences_.putFloat("latitude", latitude_);
     preferences_.putFloat("longitude", longitude_);
     preferences_.putString("timezone", timezone_);
+    preferences_.putString("weatherKey", weatherApiKey_);
 
     return true;
 }
@@ -125,6 +141,11 @@ void SettingsManager::load()
     timezone_ = preferences_.getString(
         "timezone",
         AppConfig::TZ_INFO
+    );
+
+    weatherApiKey_ = preferences_.getString(
+        "weatherKey",
+        WeatherConfig::API_KEY
     );
 
     if (timezone_.length() == 0)

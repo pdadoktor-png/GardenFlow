@@ -1126,8 +1126,10 @@ void WebManager::handleSetupSave()
         password,
         server_.arg("latitude").toFloat(),
         server_.arg("longitude").toFloat(),
-        server_.arg("timezone")
+        server_.arg("timezone"),
+        String()
     );
+
 
     if (!saved)
     {

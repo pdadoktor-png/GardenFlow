@@ -161,6 +161,9 @@ void SetupPortal::handleSave()
         ? webServer_.arg("password")
         : String();
     String timezone = webServer_.arg("timezone");
+    String weatherApiKey = webServer_.hasArg("weatherApiKey")
+        ? webServer_.arg("weatherApiKey")
+        : String();
 
     ssid.trim();
     timezone.trim();
@@ -183,7 +186,8 @@ void SetupPortal::handleSave()
         password,
         latitude,
         longitude,
-        timezone
+        timezone,
+        weatherApiKey
     );
 
     if (!saved)
@@ -208,7 +212,7 @@ void SetupPortal::handleSave()
 
     sendSetupPage(
         200,
-        "WLAN, Standort und Zeitzone gespeichert. GardenFlow startet neu und verbindet sich mit dem Heimnetz.",
+        "WLAN, Standort, Zeitzone und Wetterzugang gespeichert. GardenFlow startet neu und verbindet sich mit dem Heimnetz.",
         true
     );
 }
@@ -298,6 +302,10 @@ void SetupPortal::sendSetupPage(
         html += htmlEscape(settingsManager_ ? settingsManager_->timezone() : String("CET-1CEST,M3.5.0/2,M10.5.0/3"));
         html += F(
             "'></label>"
+            "<label>OpenWeather API-Schlüssel"
+            "<input name='weatherApiKey' type='password' maxlength='64' "
+            "placeholder='leer = vorhandenen Schlüssel behalten' "
+            "autocomplete='off'></label>"
             "<div class='small'>Deutschland: "
             "CET-1CEST,M3.5.0/2,M10.5.0/3<br>"
             "Sommer- und Winterzeit werden automatisch berücksichtigt.</div>"

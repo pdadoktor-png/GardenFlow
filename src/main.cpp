@@ -40,76 +40,49 @@ void setup()
     setupPortal.begin(settingsManager);
     valveManager.begin();
     scheduler.begin();
-
-
-    if (setupPortal.isActive())
-    {
-        Serial.println(
-            "Setupbetrieb: normaler WLAN- und Webbetrieb pausiert"
-        );
-    }
-    else
-    {
-        timeManager.begin(settingsManager);
-
-        runtimeManager.begin(
-            scheduler,
-            valveManager,
-            timeManager
-        );
-
-        weatherManager.begin(
-            timeManager,
-            settingsManager
-        );
-
-        smartControlManager.begin();
-
-        runtimeManager.setWeatherManager(
-            weatherManager
-        );
-
-        runtimeManager.setSmartControlManager(
-            smartControlManager
-        );
-
-        webManager.begin(
-            scheduler,
-            runtimeManager,
-            valveManager,
-            timeManager,
-            weatherManager,
-            smartControlManager,
-            settingsManager
-        );
-
-        Log.begin(&timeManager);
-        Log.info(
-            LogManager::Category::System,
-            "GardenFlow gestartet"
-        );
-    }
-
-    Serial.println("System bereit");
+    timeManager.begin(settingsManager);
+    runtimeManager.begin(scheduler, valveManager, timeManager);
+    weatherManager.begin(timeManager, settingsManager);
+    smartControlManager.begin();
+    runtimeManager.setWeatherManager(weatherManager);
+    runtimeManager.setSmartControlManager(smartControlManager);
     
+    displayManager.begin(
+        valveManager,
+        scheduler,
+        runtimeManager,
+        timeManager);
 
-  }
+    webManager.begin(
+        scheduler,
+        runtimeManager,
+        valveManager,
+        timeManager,
+        weatherManager,
+        smartControlManager,
+        settingsManager);
+
+    Log.begin(&timeManager);
+    Log.info(LogManager::Category::System, "GardenFlow gestartet");
+    Serial.println("System bereit");
+}
 
 void loop()
 {
     valveManager.update();
-
+    scheduler.update();
+    timeManager.update();
+    weatherManager.update();
+    runtimeManager.update();
+    displayManager.update();
     if (setupPortal.isActive())
     {
         setupPortal.update();
-        delay(2);
-        return;
+    }
+    else
+    {
+        webManager.update();
     }
 
-    timeManager.update();
-    runtimeManager.update();
-    weatherManager.update();
-    webManager.update();
-
-    delay(2);
+    delay(5);
 }

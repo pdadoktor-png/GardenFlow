@@ -127,7 +127,7 @@ bool WeatherManager::fetchForecast()
     url += "&lon=";
     url += String(settingsManager_ ? settingsManager_->longitude() : WeatherConfig::LONGITUDE, 5);
     url += "&appid=";
-    url += WeatherConfig::API_KEY;
+    url += settingsManager_ ? settingsManager_->weatherApiKey() : String();
     url += "&units=metric&lang=de";
 
     WiFiClientSecure client;
