@@ -1,0 +1,13 @@
+GardenFlow v0.34.1 – bereinigter Projektstand
+
+Korrigiert:
+- src/network/WifiManager.cpp: wörtliche \\n-Artefakte entfernt.
+- src/setup/SetupPortal.cpp: handleNetworks() als echten C++-Code wiederhergestellt.
+- src/setup/SetupPortal.cpp: jsonEscape() als echten C++-Code wiederhergestellt.
+- Header/Implementierung für WifiManager-Scan abgeglichen.
+- setupPortalRequested() bleibt ohne const.
+- saveNetworkLocation() wird mit sechs Argumenten aufgerufen.
+- SetupPortal::DNS_PORT besitzt die erforderliche C++11-Definition.
+
+Hinweis:
+Ein PlatformIO-Build konnte in der Arbeitsumgebung nicht ausgeführt werden, weil PlatformIO dort nicht installiert ist. Die konkret gemeldeten Compilerfehler und die bekannten Signaturfehler wurden im vollständigen Projektstand korrigiert.

@@ -1,0 +1,17 @@
+# PlatformIO build output
+.pio/
+
+# Local editor / OS files
+.DS_Store
+.vscode/.browse.c_cpp.db*
+.vscode/ipch/
+.idea/
+
+# Local credentials - never commit
+include/app/AppSecrets.h
+
+# Temporary files
+*.tmp
+*.bak
+*.swp
+*~

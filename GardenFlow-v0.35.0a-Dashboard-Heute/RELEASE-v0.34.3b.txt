@@ -1,0 +1,9 @@
+GardenFlow v0.34.3b
+
+Fehlerbehebung für Wetteraktualisierung:
+- DNS wird vor dem HTTPS-Aufruf geprüft.
+- TLS-Handshake- und HTTP-Timeouts wurden erhöht.
+- HTTP-Verbindungen werden nicht wiederverwendet.
+- Bei HTTP -1 wird der konkrete HTTPClient-Fehler ausgegeben.
+- Ein fehlgeschlagener Transport wird einmal wiederholt.
+- API-Schlüssel und WLAN-Verbindung werden vorab geprüft.

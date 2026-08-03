@@ -1,0 +1,8 @@
+GardenFlow v0.34.2
+
+Neu:
+- OpenWeather-Zugang direkt im Setup-Portal testen.
+- Verbindet sich testweise mit dem ausgewählten Heim-WLAN.
+- Prüft API-Schlüssel und Koordinaten ohne vorherigen Neustart.
+- Zeigt Temperatur, Luftfeuchtigkeit und Beschreibung an.
+- Setup-Access-Point bleibt während des Tests aktiv.

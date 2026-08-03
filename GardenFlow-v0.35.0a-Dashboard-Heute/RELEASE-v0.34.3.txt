@@ -1,0 +1,6 @@
+GardenFlow v0.34.3
+
+- Setup-Portal direkt ueber die Display-Seite SETUP starten.
+- Sicherheitsabfrage vor Neustart.
+- Verwendet das vorhandene setupPortalRequested-Flag.
+- Keine Aenderung an Scheduler, Wetter oder Ventillogik.

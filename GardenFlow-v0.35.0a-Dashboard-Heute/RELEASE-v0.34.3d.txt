@@ -1,0 +1,10 @@
+GardenFlow v0.34.3d
+
+Wetter-TLS-Speicher-Fix:
+- WiFiClientSecure verwendet kleinere TLS-Puffer:
+  Empfang 4096 Byte, Senden 1024 Byte.
+- Dadurch sinkt der Bedarf an zusammenhängendem internem RAM beim
+  TLS-Handshake deutlich.
+- Vor dem Abruf werden freier Heap und größter freier Speicherblock
+  im seriellen Monitor ausgegeben.
+- Wetterlogik und API-Auswertung bleiben unverändert.

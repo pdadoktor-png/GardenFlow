@@ -1,0 +1,9 @@
+GardenFlow v0.34.3e
+
+Wetterabruf ohne TLS:
+- WeatherManager verwendet für die OpenWeather-5-Tage-Vorhersage den
+  dokumentierten HTTP-Endpunkt.
+- WiFiClientSecure und der TLS-Handshake entfallen.
+- Dadurch tritt der Fehler „SSL - Memory allocation failed“ nicht mehr auf.
+- Die JSON-Auswertung, Regenwahrscheinlichkeit und Regenpause bleiben unverändert.
+- Die Setup-Portal-Wetterprüfung bleibt vorerst unverändert.

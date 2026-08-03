@@ -1,0 +1,10 @@
+GardenFlow v0.34.4 – Web-Dashboard
+
+Neu:
+- Kompakte Statusübersicht direkt oben in der Weboberfläche.
+- Systemzustand: bereit, Bewässerung aktiv, Regenpause, WLAN oder Zeitproblem.
+- Nächstes Programm mit Tag, Uhrzeit, Ventil, Dauer und Restzeit.
+- Wetterübersicht mit Temperatur, Beschreibung und Regenwahrscheinlichkeit.
+- Ventilstatus für beide Ventile.
+- Letzter Eintrag aus dem Ereignisprotokoll.
+- Bestehende Detailseiten und Funktionen bleiben erhalten.

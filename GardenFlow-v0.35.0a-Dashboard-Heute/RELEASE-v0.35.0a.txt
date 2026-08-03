@@ -1,0 +1,11 @@
+GardenFlow v0.35.0a – Dashboard „Heute"
+
+Neu:
+- Dashboard zeigt alle Bewässerungstermine des aktuellen Tages.
+- Anzeige von Uhrzeit, Programm, Ventil und Dauer.
+- Vergangene Termine werden als „ERLEDIGT" dargestellt.
+- Der nächste Termin wird hervorgehoben.
+- Noch offene Termine werden als „GEPLANT" dargestellt.
+- Direkter Sprung zum Programmeditor über „Öffnen".
+- Zusammenfassung: Gesamtzahl, vergangene und offene Termine.
+- Bestehende Scheduler-, Wetter- und Ventillogik bleiben unverändert.
