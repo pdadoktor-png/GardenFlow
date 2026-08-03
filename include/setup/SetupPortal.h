@@ -34,6 +34,8 @@ private:
 
     void handleRoot();
     void handleSave();
+    void handleNetworks();
+    void handleWeatherTest();
     void handleNotFound();
 
     void sendSetupPage(
@@ -43,4 +45,5 @@ private:
     );
 
     static String htmlEscape(const String& value);
+    static String jsonEscape(const String& value);
 };
