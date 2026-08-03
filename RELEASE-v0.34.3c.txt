@@ -1,0 +1,7 @@
+GardenFlow v0.34.3c
+
+Build-Fix:
+- Alle versehentlich über mehrere Quelltextzeilen getrennten Serial.printf-
+  Zeichenketten in WeatherManager.cpp wurden korrigiert.
+- Die Zeilenumbrüche stehen jetzt korrekt als \n innerhalb der C++-Strings.
+- Die Wetter-HTTP-Diagnose aus v0.34.3b bleibt unverändert erhalten.

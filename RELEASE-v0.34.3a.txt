@@ -1,0 +1,9 @@
+GardenFlow v0.34.3a
+
+Fehlerbehebung:
+- Der Button „Wetter aktualisieren“ prüft jetzt den in NVS gespeicherten
+  OpenWeather API-Schlüssel.
+- Zuvor wurde fälschlich nur WeatherConfig::API_KEY geprüft.
+- Der Wetterabruf selbst verwendete bereits den gespeicherten Schlüssel,
+  deshalb funktionierte der Wettertest im Setup-Portal, während die manuelle
+  Aktualisierung im normalen Webinterface fehlschlug.

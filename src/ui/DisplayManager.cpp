@@ -1,5 +1,6 @@
 #include "DisplayManager.h"
 #include "Theme.h"
+#include "settings/SettingsManager.h"
 
 DisplayManager* DisplayManager::instance_ = nullptr;
 
@@ -36,11 +37,13 @@ void DisplayManager::begin(
     ValveManager& valveManager,
     Scheduler& scheduler,
     RuntimeManager& runtimeManager,
-    TimeManager& timeManager)
+    TimeManager& timeManager,
+    SettingsManager& settingsManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
     timeManager_ = &timeManager;
+    settingsManager_ = &settingsManager;
     instance_ = this;
     valveManager_ = &valveManager;
     valveManager_->setStateChangedCallback(valveStateChanged);
@@ -96,6 +99,12 @@ void DisplayManager::update()
     updateToast();
     updateRuntimeOverlay();
     updatePowerSaving();
+
+    if (restartForSetupPending_ &&
+        static_cast<uint32_t>(millis() - restartForSetupAtMs_) >= 800UL)
+    {
+        ESP.restart();
+    }
 }
 
 void DisplayManager::refreshValve(uint8_t index)
@@ -293,6 +302,36 @@ void DisplayManager::sleepOverlayEvent(lv_event_t* event)
     instance_->wakeDisplay();
 }
 
+void DisplayManager::setupPortalButtonEvent(lv_event_t* event)
+{
+    if (instance_ == nullptr || lv_event_get_code(event) != LV_EVENT_CLICKED) return;
+    instance_->noteUserActivity();
+    if (instance_->setupPortalDialog_ != nullptr)
+    {
+        lv_obj_clear_flag(instance_->setupPortalDialog_, LV_OBJ_FLAG_HIDDEN);
+        lv_obj_move_foreground(instance_->setupPortalDialog_);
+    }
+}
+
+void DisplayManager::setupPortalConfirmEvent(lv_event_t* event)
+{
+    if (instance_ == nullptr || instance_->settingsManager_ == nullptr ||
+        lv_event_get_code(event) != LV_EVENT_CLICKED) return;
+    instance_->settingsManager_->requestSetupPortal(true);
+    if (instance_->setupPortalDialog_ != nullptr)
+        lv_obj_add_flag(instance_->setupPortalDialog_, LV_OBJ_FLAG_HIDDEN);
+    instance_->showMessage("Setup-Portal startet...");
+    instance_->restartForSetupPending_ = true;
+    instance_->restartForSetupAtMs_ = millis();
+}
+
+void DisplayManager::setupPortalCancelEvent(lv_event_t* event)
+{
+    if (instance_ == nullptr || lv_event_get_code(event) != LV_EVENT_CLICKED) return;
+    if (instance_->setupPortalDialog_ != nullptr)
+        lv_obj_add_flag(instance_->setupPortalDialog_, LV_OBJ_FLAG_HIDDEN);
+}
+
 void DisplayManager::createDashboard()
 {
     lv_obj_t* screen = lv_screen_active();
@@ -305,6 +344,7 @@ void DisplayManager::createDashboard()
     createPages(screen);
     createFooter(screen);
     createRuntimeOverlay(screen);
+    createSetupPortalDialog(screen);
 
     toast_ = lv_label_create(screen);
     lv_obj_set_style_bg_color(toast_, lv_color_hex(0x263540), 0);
@@ -541,14 +581,60 @@ void DisplayManager::createSetupPage(lv_obj_t* parent)
         nullptr
     );
 
-    lv_obj_t* warning = createLabel(
-        valvePanel,
-        "GPIO-Ausgaenge noch deaktiviert",
-        Theme::pulse()
-    );
-    lv_obj_set_width(warning, 190);
-    lv_label_set_long_mode(warning, LV_LABEL_LONG_WRAP);
-    lv_obj_set_pos(warning, 2, 108);
+    lv_obj_t* setupLabel = createLabel(valvePanel, "WLAN neu einrichten", Theme::textDim());
+    lv_obj_set_pos(setupLabel, 2, 102);
+
+    setupPortalButton_ = lv_button_create(valvePanel);
+    lv_obj_set_size(setupPortalButton_, 184, 38);
+    lv_obj_set_pos(setupPortalButton_, 2, 124);
+    lv_obj_set_style_bg_color(setupPortalButton_, Theme::accent(), 0);
+    lv_obj_set_style_radius(setupPortalButton_, 8, 0);
+    lv_obj_add_event_cb(setupPortalButton_, setupPortalButtonEvent, LV_EVENT_CLICKED, nullptr);
+
+    lv_obj_t* setupButtonLabel = createLabel(setupPortalButton_, "SETUP-PORTAL STARTEN", Theme::background());
+    lv_obj_center(setupButtonLabel);
+}
+
+void DisplayManager::createSetupPortalDialog(lv_obj_t* screen)
+{
+    setupPortalDialog_ = lv_obj_create(screen);
+    lv_obj_set_size(setupPortalDialog_, 390, 190);
+    lv_obj_align(setupPortalDialog_, LV_ALIGN_CENTER, 0, 0);
+    lv_obj_set_style_bg_color(setupPortalDialog_, Theme::panel(), 0);
+    lv_obj_set_style_bg_opa(setupPortalDialog_, LV_OPA_COVER, 0);
+    lv_obj_set_style_border_color(setupPortalDialog_, Theme::accent(), 0);
+    lv_obj_set_style_border_width(setupPortalDialog_, 2, 0);
+    lv_obj_set_style_radius(setupPortalDialog_, 14, 0);
+    lv_obj_set_style_pad_all(setupPortalDialog_, 14, 0);
+    lv_obj_clear_flag(setupPortalDialog_, LV_OBJ_FLAG_SCROLLABLE);
+
+    lv_obj_t* title = createLabel(setupPortalDialog_, "SETUP-PORTAL STARTEN?", Theme::accent());
+    lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 0);
+
+    lv_obj_t* text = createLabel(setupPortalDialog_,
+        "GardenFlow trennt das Heim-WLAN\nund startet neu als:\n\nGardenFlow-Setup / 192.168.4.1",
+        Theme::text());
+    lv_obj_set_width(text, 350);
+    lv_obj_set_style_text_align(text, LV_TEXT_ALIGN_CENTER, 0);
+    lv_obj_align(text, LV_ALIGN_CENTER, 0, -5);
+
+    lv_obj_t* cancelButton = lv_button_create(setupPortalDialog_);
+    lv_obj_set_size(cancelButton, 145, 42);
+    lv_obj_align(cancelButton, LV_ALIGN_BOTTOM_LEFT, 8, -4);
+    lv_obj_set_style_bg_color(cancelButton, Theme::panelAlt(), 0);
+    lv_obj_add_event_cb(cancelButton, setupPortalCancelEvent, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t* cancelLabel = createLabel(cancelButton, "ABBRECHEN", Theme::text());
+    lv_obj_center(cancelLabel);
+
+    lv_obj_t* startButton = lv_button_create(setupPortalDialog_);
+    lv_obj_set_size(startButton, 145, 42);
+    lv_obj_align(startButton, LV_ALIGN_BOTTOM_RIGHT, -8, -4);
+    lv_obj_set_style_bg_color(startButton, Theme::accent(), 0);
+    lv_obj_add_event_cb(startButton, setupPortalConfirmEvent, LV_EVENT_CLICKED, nullptr);
+    lv_obj_t* startLabel = createLabel(startButton, "STARTEN", Theme::background());
+    lv_obj_center(startLabel);
+
+    lv_obj_add_flag(setupPortalDialog_, LV_OBJ_FLAG_HIDDEN);
 }
 
 void DisplayManager::createValveCard(lv_obj_t* parent, uint8_t index, int x)

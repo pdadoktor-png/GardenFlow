@@ -63,7 +63,8 @@ void setup()
             valveManager,
             scheduler,
             runtimeManager,
-            timeManager);
+            timeManager,
+            settingsManager);
 
         webManager.begin(
             scheduler,

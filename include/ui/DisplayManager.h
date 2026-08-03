@@ -11,6 +11,8 @@
 #include "runtime/RuntimeManager.h"
 #include "time/TimeManager.h"
 
+class SettingsManager;
+
 class DisplayManager
 {
 public:
@@ -18,7 +20,8 @@ public:
         ValveManager& valveManager,
         Scheduler& scheduler,
         RuntimeManager& runtimeManager,
-        TimeManager& timeManager
+        TimeManager& timeManager,
+        SettingsManager& settingsManager
     );
     void update();
 
@@ -51,6 +54,7 @@ private:
     Scheduler* scheduler_ = nullptr;
     RuntimeManager* runtimeManager_ = nullptr;
     TimeManager* timeManager_ = nullptr;
+    SettingsManager* settingsManager_ = nullptr;
 
     ValveWidgets widgets_[AppConfig::DISPLAYED_VALVE_COUNT];
     ProgramsPage programsPage_;
@@ -88,6 +92,8 @@ private:
     lv_obj_t* sleepTimeoutSlider_ = nullptr;
     lv_obj_t* sleepTimeoutValueLabel_ = nullptr;
     lv_obj_t* sleepOverlay_ = nullptr;
+    lv_obj_t* setupPortalButton_ = nullptr;
+    lv_obj_t* setupPortalDialog_ = nullptr;
 
     Preferences displayPreferences_;
     Page activePage_ = Page::Manual;
@@ -99,6 +105,8 @@ private:
     uint32_t lastUserActivityMs_ = 0;
     bool displaySleeping_ = false;
     bool runtimeOverlayVisible_ = false;
+    bool restartForSetupPending_ = false;
+    uint32_t restartForSetupAtMs_ = 0;
     int16_t lastRuntimeProgramIndex_ = -1;
 
     static DisplayManager* instance_;
@@ -112,6 +120,9 @@ private:
     static void programsMenuEvent(lv_event_t* event);
     static void sleepTimeoutSliderEvent(lv_event_t* event);
     static void sleepOverlayEvent(lv_event_t* event);
+    static void setupPortalButtonEvent(lv_event_t* event);
+    static void setupPortalConfirmEvent(lv_event_t* event);
+    static void setupPortalCancelEvent(lv_event_t* event);
 
     void createDashboard();
     void createHeader(lv_obj_t* screen);
@@ -123,6 +134,7 @@ private:
     void createFooter(lv_obj_t* screen);
     void createRuntimeOverlay(lv_obj_t* screen);
     void createSleepOverlay(lv_obj_t* screen);
+    void createSetupPortalDialog(lv_obj_t* screen);
 
     void showPage(Page page);
     void setFooterVisible(bool visible);

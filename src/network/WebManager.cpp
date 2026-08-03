@@ -37,6 +37,15 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .scheduleItem{display:grid;grid-template-columns:74px 1fr auto;gap:10px;align-items:center;border-top:1px solid #314138;padding:10px 0}
 .scheduleItem:first-child{border-top:0}.scheduleTime{font-size:1.1rem;font-weight:850}.scheduleValve{font-size:.8rem;color:#a8b7ad}
 .programInactive{opacity:.55}
+.dashboardHero{margin-top:16px;background:linear-gradient(135deg,#20362a,#15221b);border:1px solid #45604d}
+.dashboardGrid{display:grid;grid-template-columns:1.2fr 1fr 1fr;gap:12px;margin-top:14px}
+.dashboardBlock{background:#111a15aa;border:1px solid #304237;border-radius:12px;padding:13px}
+.dashboardLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#9fb2a5}
+.dashboardValue{font-size:1.35rem;font-weight:800;margin-top:5px}
+.dashboardSub{font-size:.86rem;color:#b5c3ba;margin-top:4px}
+.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}
+@media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
+
 .setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
 .setupGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 @media(max-width:620px){.setupGrid{grid-template-columns:1fr}}
@@ -47,6 +56,34 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 </head>
 <body>
 <div class="top"><div><h1>GardenFlow by HK 2026 V1.0</h1><div class="muted" id="address">wird verbunden …</div></div><div id="clock" class="big">--:--</div></div>
+<section class="card dashboardHero">
+  <div class="top">
+    <div>
+      <div class="muted">Dashboard</div>
+      <div id="dashState" class="big">System wird geladen …</div>
+    </div>
+    <span id="dashStateBadge" class="badge">--</span>
+  </div>
+  <div class="dashboardGrid">
+    <div class="dashboardBlock">
+      <div class="dashboardLabel">Nächstes Programm</div>
+      <div id="dashNextTime" class="dashboardValue">--:--</div>
+      <div id="dashNextMeta" class="dashboardSub">Kein aktives Programm geplant</div>
+    </div>
+    <div class="dashboardBlock">
+      <div class="dashboardLabel">Wetter</div>
+      <div id="dashWeather" class="dashboardValue">--</div>
+      <div id="dashWeatherMeta" class="dashboardSub">Noch keine Wetterdaten</div>
+    </div>
+    <div class="dashboardBlock">
+      <div class="dashboardLabel">Ventile</div>
+      <div id="dashValves" class="dashboardSub">Status wird geladen …</div>
+    </div>
+  </div>
+  <div class="dashboardSub" style="margin-top:12px">
+    Letztes Ereignis: <span id="dashLastEvent">--</span>
+  </div>
+</section>
 <div class="grid">
   <section class="card"><div class="muted">System</div><div class="row"><span>WLAN</span><span id="wifi" class="badge">--</span></div><div class="row"><span>Zeit</span><span id="timeState" class="badge">--</span></div><div class="row"><span>Automatik</span><span id="autoState" class="badge">--</span></div></section>
   <section class="card"><div class="muted">Wetter</div><div id="weatherMain" class="big">nicht eingerichtet</div><div id="weatherDetails" class="muted">API-Schluessel fehlt</div><div class="row"><span>Regenpause</span><span id="rainPause" class="badge">--</span></div><div style="margin-top:10px"><button class="secondary" onclick="post('/api/weather/refresh')">Aktualisieren</button></div></section>
@@ -126,7 +163,46 @@ function cancelWeatherSettings(){if(lastStatus)fillWeatherForm(lastStatus);weath
 function cancelSmartSettings(){if(lastStatus)fillSmartForm(lastStatus);smartDirty=false;document.getElementById('smartDirtyMark').textContent='';setSaveState('smartSaveState','Änderungen verworfen')}
 function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markWeatherDirty);e.addEventListener('change',markWeatherDirty)});smartFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markSmartDirty);e.addEventListener('change',markSmartDirty)})}
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+function updateDashboard(s){
+    const state=document.getElementById('dashState');
+    const stateBadge=document.getElementById('dashStateBadge');
+
+    if(s.running){
+        state.textContent='Bewässerung läuft';
+        stateBadge.textContent='AKTIV';
+        stateBadge.className='badge warn';
+    }else if(s.rainPause){
+        state.textContent='Automatik pausiert';
+        stateBadge.textContent='REGENPAUSE';
+        stateBadge.className='badge warn';
+    }else if(!s.wifi){
+        state.textContent='WLAN getrennt';
+        stateBadge.textContent='OFFLINE';
+        stateBadge.className='badge off';
+    }else if(!s.timeValid){
+        state.textContent='Warte auf Systemzeit';
+        stateBadge.textContent='WARTET';
+        stateBadge.className='badge warn';
+    }else{
+        state.textContent='System bereit';
+        stateBadge.textContent='BEREIT';
+        stateBadge.className='badge ok';
+    }
+
+    document.getElementById('dashWeather').textContent=
+        s.weatherValid
+            ? s.temperature.toFixed(1)+' °C'
+            : 'nicht verfügbar';
+
+    document.getElementById('dashWeatherMeta').textContent=
+        s.weatherValid
+            ? s.weatherDescription+' · Regen '+s.rainProbability+' %'
+            : (s.weatherError||'Wetterdaten fehlen');
+
+    document.getElementById('dashValves').innerHTML=
+        s.valves.map(v=>`<div class="dashboardValve"><span>${esc(v.name)}</span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET':(v.open?'OFFEN':'ZU')}</span></div>`).join('');
+}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -220,11 +296,15 @@ function renderNextProgram(){
         metaEl.textContent='Kein aktives Programm geplant';
         whenEl.textContent='--';
         whenEl.className='badge off';
+        document.getElementById('dashNextTime').textContent='--:--';
+        document.getElementById('dashNextMeta').textContent='Kein aktives Programm geplant';
         return;
     }
 
     timeEl.textContent=formatTime(next.date);
     metaEl.textContent=`Programm ${next.program.id} · Ventil ${next.program.valve+1} · ${next.program.durationMinutes} min · ${durationUntil(next.date,now)}`;
+    document.getElementById('dashNextTime').textContent=`${whenText(next.date,now)} ${formatTime(next.date)}`;
+    document.getElementById('dashNextMeta').textContent=`Programm ${next.program.id} · Ventil ${next.program.valve+1} · ${next.program.durationMinutes} min · ${durationUntil(next.date,now)}`;
     whenEl.textContent=whenText(next.date,now);
     whenEl.className='badge ok';
 }
@@ -360,6 +440,10 @@ async function loadLog(){
     const data=await api('/api/log');
     logCache=data.entries||[];
     document.getElementById('logCount').textContent=String(logCache.length);
+    document.getElementById('dashLastEvent').textContent=
+        logCache.length
+            ? `${logCache[0].time} · ${logCache[0].message}`
+            : 'Noch keine Ereignisse';
     renderLog();
   }catch(e){
     document.getElementById('logList').innerHTML='<div class="error" style="padding:10px">Protokoll konnte nicht geladen werden</div>';

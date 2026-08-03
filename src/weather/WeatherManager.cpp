@@ -1,8 +1,8 @@
 #include "weather/WeatherManager.h"
+#include <WiFiClient.h>
 
 #include <ArduinoJson.h>
 #include <HTTPClient.h>
-#include <WiFiClientSecure.h>
 
 #include "app/WeatherConfig.h"
 #include "time/TimeManager.h"
@@ -51,7 +51,15 @@ bool WeatherManager::refreshNow()
 
 bool WeatherManager::isConfigured() const
 {
-    return WeatherConfig::API_KEY[0] != '\0';
+    if (settingsManager_ == nullptr)
+    {
+        return false;
+    }
+
+    const String& apiKey = settingsManager_->weatherApiKey();
+
+    return apiKey.length() > 0 &&
+           apiKey != "DEIN_OPENWEATHER_API_SCHLUESSEL";
 }
 
 bool WeatherManager::isValid() const
@@ -120,35 +128,105 @@ bool WeatherManager::shouldAttemptUpdate() const
 
 bool WeatherManager::fetchForecast()
 {
-    String url;
-    url.reserve(240);
-    url = "https://api.openweathermap.org/data/2.5/forecast?lat=";
-    url += String(settingsManager_ ? settingsManager_->latitude() : WeatherConfig::LATITUDE, 5);
-    url += "&lon=";
-    url += String(settingsManager_ ? settingsManager_->longitude() : WeatherConfig::LONGITUDE, 5);
-    url += "&appid=";
-    url += settingsManager_ ? settingsManager_->weatherApiKey() : String();
-    url += "&units=metric&lang=de";
-
-    WiFiClientSecure client;
-    client.setInsecure();
-
-    HTTPClient http;
-    http.setConnectTimeout(10000);
-    http.setTimeout(15000);
-
-    if (!http.begin(client, url))
+    if (settingsManager_ == nullptr ||
+        timeManager_ == nullptr ||
+        !timeManager_->isWifiConnected())
     {
-        lastError_ = "HTTPS konnte nicht gestartet werden";
+        lastError_ = "WLAN nicht verbunden";
         Serial.printf("Wetterfehler: %s\n", lastError_.c_str());
         return false;
     }
 
-    const int statusCode = http.GET();
+    const String apiKey = settingsManager_->weatherApiKey();
+
+    if (apiKey.length() == 0 ||
+        apiKey == "DEIN_OPENWEATHER_API_SCHLUESSEL")
+    {
+        lastError_ = "OpenWeather API-Schluessel fehlt";
+        Serial.printf("Wetterfehler: %s\n", lastError_.c_str());
+        return false;
+    }
+
+    IPAddress resolvedAddress;
+    if (!WiFi.hostByName(
+            "api.openweathermap.org",
+            resolvedAddress))
+    {
+        lastError_ = "DNS fuer OpenWeather fehlgeschlagen";
+        Serial.printf("Wetterfehler: %s\n", lastError_.c_str());
+        return false;
+    }
+
+    String url;
+    url.reserve(260);
+    url = "http://api.openweathermap.org/data/2.5/forecast?lat=";
+    url += String(settingsManager_->latitude(), 5);
+    url += "&lon=";
+    url += String(settingsManager_->longitude(), 5);
+    url += "&appid=";
+    url += apiKey;
+    url += "&units=metric&lang=de";
+
+    int statusCode = HTTPC_ERROR_CONNECTION_REFUSED;
+    String transportError;
+
+    WiFiClient client;
+
+    HTTPClient http;
+    http.setConnectTimeout(15000);
+    http.setTimeout(20000);
+    http.setReuse(false);
+    http.useHTTP10(true);
+
+    for (uint8_t attempt = 0; attempt < 2; ++attempt)
+    {
+        if (!http.begin(client, url))
+        {
+            statusCode = HTTPC_ERROR_CONNECTION_REFUSED;
+            transportError = "HTTP-Verbindung konnte nicht gestartet werden";
+        }
+        else
+        {
+            statusCode = http.GET();
+
+            if (statusCode == HTTP_CODE_OK)
+            {
+                break;
+            }
+
+            transportError = HTTPClient::errorToString(statusCode);
+            http.end();
+        }
+
+        if (attempt == 0)
+        {
+            delay(500);
+        }
+    }
+
     if (statusCode != HTTP_CODE_OK)
     {
-        lastError_ = String("HTTP ") + statusCode;
-        Serial.printf("Wetterfehler: %s\n", lastError_.c_str());
+        if (statusCode < 0)
+        {
+            lastError_ = String("HTTP ") +
+                String(statusCode) +
+                " (" +
+                transportError +
+                ")";
+        }
+        else
+        {
+            lastError_ = String("HTTP ") + String(statusCode);
+        }
+
+        Serial.printf(
+            "Wetterfehler: %s, WLAN %s, IP %s, DNS %s\n",
+            lastError_.c_str(),
+            WiFi.SSID().c_str(),
+            WiFi.localIP().toString().c_str(),
+            resolvedAddress.toString().c_str()
+        );
+
         http.end();
         return false;
     }
@@ -162,11 +240,12 @@ bool WeatherManager::fetchForecast()
     filter["list"][0]["rain"]["3h"] = true;
 
     JsonDocument document;
-    DeserializationError error = deserializeJson(
+    const DeserializationError error = deserializeJson(
         document,
         http.getStream(),
         DeserializationOption::Filter(filter)
     );
+
     http.end();
 
     if (error)
@@ -186,8 +265,12 @@ bool WeatherManager::fetchForecast()
 
     JsonObject first = list[0];
     temperatureC_ = first["main"]["temp"] | 0.0f;
-    humidityPercent_ = static_cast<uint8_t>(first["main"]["humidity"] | 0);
-    description_ = first["weather"][0]["description"] | "unbekannt";
+    humidityPercent_ =
+        static_cast<uint8_t>(
+            first["main"]["humidity"] | 0
+        );
+    description_ =
+        first["weather"][0]["description"] | "unbekannt";
 
     rainMmNext24Hours_ = 0.0f;
     maxRainProbabilityPercent_ = 0;
@@ -198,21 +281,36 @@ bool WeatherManager::fetchForecast()
     for (JsonObject item : list)
     {
         const time_t forecastEpoch = item["dt"] | 0;
-        if (forecastEpoch <= 0 || forecastEpoch > limit)
+
+        if (forecastEpoch <= 0 ||
+            forecastEpoch > limit)
         {
             continue;
         }
 
-        const float probability = item["pop"] | 0.0f;
-        const uint8_t probabilityPercent = static_cast<uint8_t>(
-            constrain(static_cast<int>(probability * 100.0f + 0.5f), 0, 100)
-        );
-        if (probabilityPercent > maxRainProbabilityPercent_)
+        const float probability =
+            item["pop"] | 0.0f;
+
+        const uint8_t probabilityPercent =
+            static_cast<uint8_t>(
+                constrain(
+                    static_cast<int>(
+                        probability * 100.0f + 0.5f
+                    ),
+                    0,
+                    100
+                )
+            );
+
+        if (probabilityPercent >
+            maxRainProbabilityPercent_)
         {
-            maxRainProbabilityPercent_ = probabilityPercent;
+            maxRainProbabilityPercent_ =
+                probabilityPercent;
         }
 
-        rainMmNext24Hours_ += item["rain"]["3h"] | 0.0f;
+        rainMmNext24Hours_ +=
+            item["rain"]["3h"] | 0.0f;
     }
 
     valid_ = true;
@@ -220,12 +318,17 @@ bool WeatherManager::fetchForecast()
     lastError_ = "";
 
     Serial.printf(
-        "Wetter aktualisiert: %.1f C, %u%% Feuchte, %.1f mm Regen/24h, %u%% Regenrisiko%s\n",
+        "Wetter aktualisiert: %.1f C, %u%% Feuchte, "
+        "%.1f mm Regen/24h, %u%% Regenrisiko%s\n",
         temperatureC_,
         static_cast<unsigned>(humidityPercent_),
         rainMmNext24Hours_,
-        static_cast<unsigned>(maxRainProbabilityPercent_),
-        automaticPauseActive() ? ", Regenpause aktiv" : ""
+        static_cast<unsigned>(
+            maxRainProbabilityPercent_
+        ),
+        automaticPauseActive()
+            ? ", Regenpause aktiv"
+            : ""
     );
 
     return true;
