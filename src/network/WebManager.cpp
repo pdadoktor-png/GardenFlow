@@ -12,6 +12,7 @@
 #include "smart/SmartControlManager.h"
 #include "log/LogManager.h"
 #include "settings/SettingsManager.h"
+#include "advisor/AdvisorEngine.h"
 
 namespace
 {
@@ -43,7 +44,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .dashboardLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#9fb2a5}
 .dashboardValue{font-size:1.35rem;font-weight:800;margin-top:5px}
 .dashboardSub{font-size:.86rem;color:#b5c3ba;margin-top:4px}
-.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}
+.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}
 @media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
 
 .setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
@@ -78,6 +79,22 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
     <div class="dashboardBlock">
       <div class="dashboardLabel">Ventile</div>
       <div id="dashValves" class="dashboardSub">Status wird geladen …</div>
+    </div>
+    <div class="dashboardBlock advisorCard">
+      <div class="top">
+        <div>
+          <div class="dashboardLabel">GardenFlow Advisor</div>
+          <div id="advisorHeadline" class="advisorHeadline">Wird ausgewertet …</div>
+        </div>
+        <span id="advisorBadge" class="badge">--</span>
+      </div>
+      <div id="advisorSummary" class="dashboardSub">Noch keine Empfehlung</div>
+      <div id="advisorNarrative" class="advisorNarrative">Wetterdaten werden ausgewertet …</div>
+      <div class="dashboardLabel" style="margin-top:12px">Warum?</div>
+      <div id="advisorFactors" class="advisorFactors"></div>
+      <div id="advisorDuration" class="advisorDuration"></div>
+      <div class="advisorConfidence"><span id="advisorConfidenceText">Vertrauen: --</span><div class="confidenceBar"><div id="advisorConfidenceFill" class="confidenceFill" style="width:0%"></div></div></div>
+      <div id="advisorReasons" class="advisorReasons"></div>
     </div>
   </div>
   <div class="dashboardSub" style="margin-top:12px">
@@ -163,6 +180,16 @@ function cancelWeatherSettings(){if(lastStatus)fillWeatherForm(lastStatus);weath
 function cancelSmartSettings(){if(lastStatus)fillSmartForm(lastStatus);smartDirty=false;document.getElementById('smartDirtyMark').textContent='';setSaveState('smartSaveState','Änderungen verworfen')}
 function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markWeatherDirty);e.addEventListener('change',markWeatherDirty)});smartFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markSmartDirty);e.addEventListener('change',markSmartDirty)})}
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
+function signedPercent(value){const number=Number(value||0);return (number>0?'+':'')+number+' %';}
+function confidenceText(value){if(value>=85)return 'Sehr sicher';if(value>=70)return 'Sicher';if(value>=50)return 'Mittlere Sicherheit';return 'Geringe Sicherheit';}
+function advisorNextDuration(s){if(!s.advisorValid||!programCache.length)return '';const now=parseControllerNow();const next=allOccurrences(now,8)[0];if(!next)return '';const base=Number(next.program.durationMinutes||0);const factor=Math.max(0,100+Number(s.advisorAdjustment||0))/100;const recommended=s.advisorAdjustment<=-60?0:Math.max(1,Math.round(base*factor));return `Empfohlene Laufzeit für Programm ${next.program.id}: ${base} min → ${recommended} min`;}
+function updateAdvisor(s){
+ const headline=document.getElementById('advisorHeadline'),summary=document.getElementById('advisorSummary'),narrative=document.getElementById('advisorNarrative'),badge=document.getElementById('advisorBadge'),factors=document.getElementById('advisorFactors'),reasons=document.getElementById('advisorReasons'),duration=document.getElementById('advisorDuration'),confidence=document.getElementById('advisorConfidenceText'),confidenceFill=document.getElementById('advisorConfidenceFill');
+ headline.textContent=s.advisorHeadline||'Keine Empfehlung';summary.textContent=s.advisorSummary||'';narrative.textContent=s.advisorNarrative||'';
+ if(!s.advisorValid){badge.textContent='WARTET';badge.className='badge off';}else if(s.advisorAdjustment<=-60){badge.textContent='PAUSE';badge.className='badge warn';}else if(s.advisorAdjustment<0){badge.textContent=s.advisorAdjustment+' %';badge.className='badge warn';}else if(s.advisorAdjustment>0){badge.textContent='+'+s.advisorAdjustment+' %';badge.className='badge ok';}else{badge.textContent='NORMAL';badge.className='badge ok';}
+ factors.innerHTML=(s.advisorFactors||[]).map(f=>{const c=Number(f.contribution||0),cls=c>0?'ok':(c<0?'warn':'off');return `<div class="advisorFactor"><span>${esc(f.name)}</span><span>${esc(f.value)}</span><span class="badge ${cls}">${signedPercent(c)}</span></div>`;}).join('')||'<div class="dashboardSub" style="padding:10px">Noch keine Einzelfaktoren verfügbar</div>';
+ reasons.innerHTML=(s.advisorReasons||[]).map(reason=>`<div>✓ ${esc(reason)}</div>`).join('');duration.textContent=advisorNextDuration(s);const cv=Number(s.advisorConfidence||0);confidence.textContent=`Vertrauen: ${cv} % · ${confidenceText(cv)}`;confidenceFill.style.width=Math.max(0,Math.min(100,cv))+'%';
+}
 function updateDashboard(s){
     const state=document.getElementById('dashState');
     const stateBadge=document.getElementById('dashStateBadge');
@@ -202,7 +229,7 @@ function updateDashboard(s){
     document.getElementById('dashValves').innerHTML=
         s.valves.map(v=>`<div class="dashboardValve"><span>${esc(v.name)}</span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET':(v.open?'OFFEN':'ZU')}</span></div>`).join('');
 }
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateAdvisor(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -532,7 +559,8 @@ void WebManager::begin(Scheduler& scheduler,
                        TimeManager& timeManager,
                        WeatherManager& weatherManager,
                        SmartControlManager& smartControlManager,
-                       SettingsManager& settingsManager)
+                       SettingsManager& settingsManager,
+                       AdvisorEngine& advisorEngine)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
@@ -541,6 +569,7 @@ void WebManager::begin(Scheduler& scheduler,
     weatherManager_ = &weatherManager;
     smartControlManager_ = &smartControlManager;
     settingsManager_ = &settingsManager;
+    advisorEngine_ = &advisorEngine;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
@@ -657,7 +686,9 @@ void WebManager::handleRoot()
 
 void WebManager::handleStatus()
 {
-    if (!timeManager_ || !runtimeManager_ || !valveManager_ || !scheduler_ || !weatherManager_ || !smartControlManager_)
+    if (!timeManager_ || !runtimeManager_ || !valveManager_ ||
+        !scheduler_ || !weatherManager_ || !smartControlManager_ ||
+        !advisorEngine_)
     {
         sendJson(503, "{\"error\":\"System nicht bereit\"}");
         return;
@@ -669,7 +700,7 @@ void WebManager::handleStatus()
     timeManager_->formatDate(dateText, sizeof(dateText));
 
     String body;
-    body.reserve(1100);
+    body.reserve(2600);
     body += F("{\"wifi\":");
     body += timeManager_->isWifiConnected() ? F("true") : F("false");
     body += F(",\"timeValid\":");
@@ -741,7 +772,50 @@ void WebManager::handleStatus()
     body += String(smartControlManager_->vacationIntervalDays());
     body += F(",\"vacationPercent\":");
     body += String(smartControlManager_->vacationPercent());
-    body += F(",\"valves\":[");
+
+    const auto& advisor =
+        advisorEngine_->recommendation();
+
+    body += F(",\"advisorValid\":");
+    body += advisor.valid ? F("true") : F("false");
+    body += F(",\"advisorAdjustment\":");
+    body += String(advisor.adjustmentPercent);
+    body += F(",\"advisorConfidence\":");
+    body += String(advisor.confidencePercent);
+    body += F(",\"advisorHeadline\":\"");
+    body += jsonEscape(advisor.headline);
+    body += F("\",\"advisorSummary\":\"");
+    body += jsonEscape(advisor.summary);
+    body += F("\",\"advisorNarrative\":\"");
+    body += jsonEscape(advisor.narrative);
+    body += F("\",\"advisorFactors\":[");
+    for (uint8_t i = 0; i < advisor.factorCount; ++i)
+    {
+        if (i > 0) body += ',';
+        const AdvisorFactor& factor = advisor.factors[i];
+        body += F("{\"name\":\"");
+        body += jsonEscape(factor.name);
+        body += F("\",\"value\":\"");
+        body += jsonEscape(factor.value);
+        body += F("\",\"contribution\":");
+        body += String(factor.contributionPercent);
+        body += '}';
+    }
+    body += F("],\"advisorReasons\":[");
+
+    for (uint8_t i = 0; i < advisor.reasonCount; ++i)
+    {
+        if (i > 0)
+        {
+            body += ',';
+        }
+
+        body += '\"';
+        body += jsonEscape(advisor.reasons[i]);
+        body += '\"';
+    }
+
+    body += F("],\"valves\":[");
 
     for (uint8_t i = 0; i < AppConfig::DISPLAYED_VALVE_COUNT; ++i)
     {

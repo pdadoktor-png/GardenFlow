@@ -14,6 +14,7 @@
 #include "log/LogManager.h"
 #include "settings/SettingsManager.h"
 #include "setup/SetupPortal.h"
+#include "advisor/AdvisorEngine.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -26,6 +27,7 @@ static WeatherManager weatherManager;
 static SmartControlManager smartControlManager;
 static SettingsManager settingsManager;
 static SetupPortal setupPortal;
+static AdvisorEngine advisorEngine;
 
 void setup()
 {
@@ -55,6 +57,10 @@ void setup()
         runtimeManager.begin(scheduler, valveManager, timeManager);
         weatherManager.begin(timeManager, settingsManager);
         smartControlManager.begin();
+        advisorEngine.begin(
+            weatherManager,
+            smartControlManager
+        );
 
         runtimeManager.setWeatherManager(weatherManager);
         runtimeManager.setSmartControlManager(smartControlManager);
@@ -73,7 +79,8 @@ void setup()
             timeManager,
             weatherManager,
             smartControlManager,
-            settingsManager);
+            settingsManager,
+            advisorEngine);
 
         Log.begin(&timeManager);
         Log.info(LogManager::Category::System, "GardenFlow gestartet");
@@ -96,6 +103,7 @@ void loop()
 
     timeManager.update();
     weatherManager.update();
+    advisorEngine.update();
     runtimeManager.update();
     displayManager.update();
     webManager.update();
