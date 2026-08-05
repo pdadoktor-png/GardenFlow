@@ -14,6 +14,7 @@
 #include "settings/SettingsManager.h"
 #include "advisor/AdvisorEngine.h"
 #include "water/WaterManager.h"
+#include "profiles/GardenProfiles.h"
 
 namespace
 {
@@ -48,7 +49,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
 
-.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
+.profileGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}.profileCard{border:1px solid #36503f;border-radius:12px;padding:12px;background:#111a15aa}.profileCard h3{margin:0 0 10px}.profileFormula{margin-top:8px;color:#b9c9be;font-size:.84rem}.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
 .setupGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 @media(max-width:620px){.setupGrid{grid-template-columns:1fr}}
 
@@ -133,6 +134,18 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
 <section class="card" style="margin-top:12px">
+<div class="top">
+  <div>
+    <div class="muted">Garden Profiles</div>
+    <div class="big">Pflanzenprofile bearbeiten</div>
+  </div>
+  <button class="secondary" onclick="resetProfiles()">Standardwerte</button>
+</div>
+<div class="setupNote">Profilkorrektur wirkt nach dem Saisonfaktor. Die Empfindlichkeiten bestimmen, wie stark Temperatur, Luftfeuchte und Regen die Empfehlung beeinflussen.</div>
+<div id="profileGrid" class="profileGrid"><div class="muted">Profile werden geladen …</div></div>
+<div id="profileSaveState" class="saveState"></div>
+</section>
+<section class="card" style="margin-top:12px">
 <div class="top"><div><div class="muted">Wasserbilanz</div><div class="big">Durchfluss & Kosten</div></div></div>
 <div class="formgrid" style="margin-top:12px">
 <label class="field"><span>Ventil 1 (Liter/Minute)</span><input id="waterFlow1" type="number" min="0" max="250" step="0.1"></label>
@@ -147,7 +160,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
   <div class="top"><div><div class="muted">Programm</div><div id="editorTitle" class="big">Neu</div></div><button class="secondary" onclick="closeEditor()">Schließen</button></div>
   <div class="formgrid" style="margin-top:16px">
-    <label class="field"><span>Ventil</span><select id="editValve"><option value="0">Ventil 1</option><option value="1">Ventil 2</option></select></label>
+    <label class="field"><span>Ventil</span><select id="editValve"><option value="0">Ventil 1</option><option value="1">Ventil 2</option></select></label><label class="field"><span>Gartenprofil</span><select id="editProfile"><option value="0">Allgemein</option><option value="1">Rasen</option><option value="2">Blumen</option><option value="3">Gemüse</option><option value="4">Tomaten</option><option value="5">Hecke</option><option value="6">Bäume</option><option value="7">Mediterran</option></select></label>
     <label class="field"><span>Startzeit</span><input id="editTime" type="time" value="06:00"></label>
     <label class="field"><span>Dauer (Minuten)</span><input id="editDuration" type="number" min="1" max="1440" value="15"></label>
     <label class="field"><span>Status</span><select id="editEnabled"><option value="1">Aktiv</option><option value="0">Inaktiv</option></select></label>
@@ -212,6 +225,141 @@ function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElem
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
 function signedPercent(value){const number=Number(value||0);return (number>0?'+':'')+number+' %';}
 function confidenceText(value){if(value>=85)return 'Sehr sicher';if(value>=70)return 'Sicher';if(value>=50)return 'Mittlere Sicherheit';return 'Geringe Sicherheit';}
+let profileCache=[];
+
+function profileById(id){
+    return profileCache.find(
+        profile=>Number(profile.id)===Number(id)
+    )||{
+        id:0,
+        name:'Allgemein',
+        symbol:'Garten',
+        correction:0,
+        temperature:100,
+        humidity:100,
+        rain:100,
+        minimum:1,
+        maximum:240
+    };
+}
+
+function renderProfileEditor(){
+    const grid=document.getElementById('profileGrid');
+    if(!grid)return;
+
+    grid.innerHTML=profileCache.map(profile=>`
+      <div class="profileCard">
+        <h3>${esc(profile.symbol||'')} ${esc(profile.name)}</h3>
+        <div class="formgrid">
+          <label class="field"><span>Name</span><input id="profileName${profile.id}" maxlength="23" value="${esc(profile.name)}"></label>
+          <label class="field"><span>Symbol/Bezeichnung</span><input id="profileSymbol${profile.id}" maxlength="15" value="${esc(profile.symbol||'')}"></label>
+          <label class="field"><span>Profilkorrektur (%)</span><input id="profileCorrection${profile.id}" type="number" min="-80" max="100" step="5" value="${profile.correction}"></label>
+          <label class="field"><span>Temperatur-Empfindlichkeit (%)</span><input id="profileTemperature${profile.id}" type="number" min="0" max="200" step="5" value="${profile.temperature}"></label>
+          <label class="field"><span>Luftfeuchte-Empfindlichkeit (%)</span><input id="profileHumidity${profile.id}" type="number" min="0" max="200" step="5" value="${profile.humidity}"></label>
+          <label class="field"><span>Regen-Empfindlichkeit (%)</span><input id="profileRain${profile.id}" type="number" min="0" max="200" step="5" value="${profile.rain}"></label>
+          <label class="field"><span>Min. Laufzeit (min)</span><input id="profileMinimum${profile.id}" type="number" min="1" max="240" value="${profile.minimum}"></label>
+          <label class="field"><span>Max. Laufzeit (min)</span><input id="profileMaximum${profile.id}" type="number" min="1" max="240" value="${profile.maximum}"></label>
+        </div>
+        <div class="profileFormula">
+          Saisonlaufzeit → Profil ${Number(profile.correction)>=0?'+':''}${profile.correction} % → wetterabhängige Empfindlichkeiten
+        </div>
+        <div style="margin-top:10px"><button onclick="saveProfile(${profile.id})">Profil speichern</button></div>
+      </div>
+    `).join('');
+
+    const select=document.getElementById('editProfile');
+    if(select){
+        const selected=select.value;
+        select.innerHTML=profileCache.map(
+            profile=>`<option value="${profile.id}">${esc(profile.name)}</option>`
+        ).join('');
+        select.value=selected;
+    }
+}
+
+async function loadProfiles(){
+    try{
+        const data=await api('/api/profiles');
+        profileCache=data.profiles||[];
+        renderProfileEditor();
+    }catch(e){
+        setSaveState(
+            'profileSaveState',
+            'Profile konnten nicht geladen werden: '+e.message,
+            'errmsg'
+        );
+    }
+}
+
+async function saveProfile(id){
+    const value=name=>document.getElementById(name+id).value;
+
+    const data={
+        id,
+        name:value('profileName').trim(),
+        symbol:value('profileSymbol').trim(),
+        correction:Number(value('profileCorrection')),
+        temperature:Number(value('profileTemperature')),
+        humidity:Number(value('profileHumidity')),
+        rain:Number(value('profileRain')),
+        minimum:Number(value('profileMinimum')),
+        maximum:Number(value('profileMaximum'))
+    };
+
+    try{
+        await api('/api/profile/save',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:new URLSearchParams(data)
+        });
+
+        setSaveState(
+            'profileSaveState',
+            'Profil gespeichert',
+            'okmsg'
+        );
+
+        await loadProfiles();
+        await loadPrograms();
+        await loadStatus();
+    }catch(e){
+        setSaveState(
+            'profileSaveState',
+            'Fehler: '+e.message,
+            'errmsg'
+        );
+    }
+}
+
+async function resetProfiles(){
+    if(!confirm('Alle Pflanzenprofile auf Standardwerte zurücksetzen?'))return;
+
+    try{
+        await api('/api/profiles/reset',{method:'POST'});
+        setSaveState(
+            'profileSaveState',
+            'Standardprofile wiederhergestellt',
+            'okmsg'
+        );
+        await loadProfiles();
+        await loadPrograms();
+        await loadStatus();
+    }catch(e){
+        setSaveState(
+            'profileSaveState',
+            'Fehler: '+e.message,
+            'errmsg'
+        );
+    }
+}
+
+function advisorContribution(s,name){
+    const factor=(s.advisorFactors||[]).find(
+        item=>String(item.name||'').toLowerCase().includes(name)
+    );
+    return Number(factor?factor.contribution:0);
+}
+
 function advisorNextDuration(s){
     if(!s.advisorValid||!programCache.length)return '';
 
@@ -219,30 +367,59 @@ function advisorNextDuration(s){
     const next=allOccurrences(now,8)[0];
     if(!next)return '';
 
+    const profile=profileById(next.program.profileId);
     const standard=Number(next.program.durationMinutes||0);
     const seasonPercent=Number(s.advisorSeasonPercent||100);
-    const weatherPercent=Number(s.advisorWeatherAdjustment||0);
 
     const seasonal=Math.max(
         1,
         Math.round(standard*seasonPercent/100)
     );
 
+    const profiled=Math.max(
+        profile.minimum,
+        Math.min(
+            profile.maximum,
+            Math.round(
+                seasonal*(100+Number(profile.correction||0))/100
+            )
+        )
+    );
+
+    const temperature=
+        advisorContribution(s,'temperatur')*
+        Number(profile.temperature||100)/100;
+
+    const humidity=
+        advisorContribution(s,'luftfeuchte')*
+        Number(profile.humidity||100)/100;
+
+    const rain=
+        advisorContribution(s,'regen')*
+        Number(profile.rain||100)/100;
+
+    const weatherPercent=Math.round(
+        temperature+humidity+rain
+    );
+
     const recommended=
         weatherPercent<=-60
             ? 0
             : Math.max(
-                1,
-                Math.round(
-                    seasonal*(100+weatherPercent)/100
+                profile.minimum,
+                Math.min(
+                    profile.maximum,
+                    Math.round(
+                        profiled*(100+weatherPercent)/100
+                    )
                 )
             );
 
     if(recommended===0){
-        return `Programm ${next.program.id}: Standard ${standard} min → Saison ${seasonal} min → heute aussetzen`;
+        return `${profile.name}: Standard ${standard} min → Saison ${seasonal} min → Profil ${profiled} min → heute aussetzen`;
     }
 
-    return `Programm ${next.program.id}: Standard ${standard} min → Saison ${seasonal} min → Wetter ${recommended} min`;
+    return `${profile.name}: Standard ${standard} min → Saison ${seasonal} min → Profil ${profiled} min → Wetter ${recommended} min`;
 }
 
 function updateAdvisor(s){
@@ -469,16 +646,16 @@ function renderNextProgram(){
     }
 
     timeEl.textContent=formatTime(next.date);
-    metaEl.textContent=`Programm ${next.program.id} · Ventil ${next.program.valve+1} · ${next.program.durationMinutes} min · ${durationUntil(next.date,now)}`;
+    metaEl.textContent=`Programm ${next.program.id} · ${next.program.profileName||'Allgemein'} · Ventil ${next.program.valve+1} · ${next.program.durationMinutes} min · ${durationUntil(next.date,now)}`;
     document.getElementById('dashNextTime').textContent=`${whenText(next.date,now)} ${formatTime(next.date)}`;
-    document.getElementById('dashNextMeta').textContent=`Programm ${next.program.id} · Ventil ${next.program.valve+1} · ${next.program.durationMinutes} min · ${durationUntil(next.date,now)}`;
+    document.getElementById('dashNextMeta').textContent=`Programm ${next.program.id} · ${next.program.profileName||'Allgemein'} · Ventil ${next.program.valve+1} · ${next.program.durationMinutes} min · ${durationUntil(next.date,now)}`;
     whenEl.textContent=whenText(next.date,now);
     whenEl.className='badge ok';
 }
 
 function scheduleItemHtml(entry){
     const p=entry.program;
-    return `<div class="scheduleItem"><div class="scheduleTime">${formatTime(entry.date)}</div><div><b>Programm ${p.id}</b><div class="scheduleValve">Ventil ${p.valve+1} · ${p.durationMinutes} min</div></div><button class="secondary" onclick="editProgram(${p.index})">Bearbeiten</button></div>`;
+    return `<div class="scheduleItem"><div class="scheduleTime">${formatTime(entry.date)}</div><div><b>Programm ${p.id} · ${esc(p.profileName||'Allgemein')}</b><div class="scheduleValve">Ventil ${p.valve+1} · ${p.durationMinutes} min</div></div><button class="secondary" onclick="editProgram(${p.index})">Bearbeiten</button></div>`;
 }
 
 function renderUpcomingPrograms(){
@@ -525,7 +702,7 @@ function renderAllPrograms(running){
             const nextText=x.enabled&&next
                 ? `Nächster Start: ${whenText(next,now)} ${formatTime(next)}`
                 : (x.enabled?'Kein Termin':'Inaktiv');
-            return `<div class="program ${x.enabled?'':'programInactive'}"><div class="row"><div><b>Programm ${x.id}</b> · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${nextText}</div></div><div><button class="secondary" onclick="editProgram(${x.index})">Bearbeiten</button> <button class="secondary" onclick="post('/api/program/copy',{index:${x.index}})">Kopieren</button> <button class="secondary" onclick="post('/api/program/toggle',{index:${x.index}})">${x.enabled?'Aus':'Ein'}</button> <button class="stop" onclick="deleteProgram(${x.index})">Löschen</button> <button ${(!x.enabled||running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div></div>`;
+            return `<div class="program ${x.enabled?'':'programInactive'}"><div class="row"><div><b>Programm ${x.id}</b> · ${esc(x.profileName||'Allgemein')} · Ventil ${x.valve+1}<div class="days">${esc(x.days)} · ${String(x.hour).padStart(2,'0')}:${String(x.minute).padStart(2,'0')} · ${x.durationMinutes} min · ${nextText}</div></div><div><button class="secondary" onclick="editProgram(${x.index})">Bearbeiten</button> <button class="secondary" onclick="post('/api/program/copy',{index:${x.index}})">Kopieren</button> <button class="secondary" onclick="post('/api/program/toggle',{index:${x.index}})">${x.enabled?'Aus':'Ein'}</button> <button class="stop" onclick="deleteProgram(${x.index})">Löschen</button> <button ${(!x.enabled||running)?'disabled':''} onclick="post('/api/program/start?index=${x.index}')">Start</button></div></div></div>`;
           }).join('')
         : '<div class="muted">Keine Programme vorhanden</div>';
 }
@@ -546,10 +723,10 @@ let editorIndex=-1,editorDays=127;
 const dayNames=['Mo','Di','Mi','Do','Fr','Sa','So'];
 function renderWeekdays(){document.getElementById('weekdayButtons').innerHTML=dayNames.map((n,i)=>`<button type="button" class="day ${(editorDays&(1<<i))?'active':''}" onclick="toggleEditorDay(${i})">${n}</button>`).join('')}
 function toggleEditorDay(i){editorDays^=(1<<i);renderWeekdays()}
-function openEditor(x){editorIndex=x?x.index:-1;editorDays=x?x.weekdays:127;document.getElementById('editorTitle').textContent=x?`Programm ${x.id} bearbeiten`:'Neues Programm';document.getElementById('editValve').value=String(x?x.valve:0);document.getElementById('editTime').value=`${String(x?x.hour:6).padStart(2,'0')}:${String(x?x.minute:0).padStart(2,'0')}`;document.getElementById('editDuration').value=String(x?x.durationMinutes:15);document.getElementById('editEnabled').value=x&&x.enabled?'1':'0';renderWeekdays();document.getElementById('editorModal').classList.add('open')}
+function openEditor(x){editorIndex=x?x.index:-1;editorDays=x?x.weekdays:127;document.getElementById('editorTitle').textContent=x?`Programm ${x.id} bearbeiten`:'Neues Programm';document.getElementById('editValve').value=String(x?x.valve:0);document.getElementById('editProfile').value=String(x?x.profileId:0);document.getElementById('editTime').value=`${String(x?x.hour:6).padStart(2,'0')}:${String(x?x.minute:0).padStart(2,'0')}`;document.getElementById('editDuration').value=String(x?x.durationMinutes:15);document.getElementById('editEnabled').value=x&&x.enabled?'1':'0';renderWeekdays();document.getElementById('editorModal').classList.add('open')}
 function closeEditor(){document.getElementById('editorModal').classList.remove('open')}
 function modalBackdrop(e){if(e.target.id==='editorModal')closeEditor()}
-async function saveEditor(){const time=document.getElementById('editTime').value.split(':');const duration=Number(document.getElementById('editDuration').value);if(time.length!==2||duration<1||duration>1440||editorDays===0){alert(editorDays===0?'Mindestens einen Wochentag auswählen':'Bitte gültige Werte eingeben');return}const d={valve:Number(document.getElementById('editValve').value),hour:Number(time[0]),minute:Number(time[1]),duration,days:editorDays,enabled:Number(document.getElementById('editEnabled').value)};if(editorIndex<0)await post('/api/program/create',d);else{d.index=editorIndex;await post('/api/program/update',d)}closeEditor()}
+async function saveEditor(){const time=document.getElementById('editTime').value.split(':');const duration=Number(document.getElementById('editDuration').value);if(time.length!==2||duration<1||duration>1440||editorDays===0){alert(editorDays===0?'Mindestens einen Wochentag auswählen':'Bitte gültige Werte eingeben');return}const d={valve:Number(document.getElementById('editValve').value),profile:Number(document.getElementById('editProfile').value),hour:Number(time[0]),minute:Number(time[1]),duration,days:editorDays,enabled:Number(document.getElementById('editEnabled').value)};if(editorIndex<0)await post('/api/program/create',d);else{d.index=editorIndex;await post('/api/program/update',d)}closeEditor()}
 function newProgram(){openEditor(null)}
 function editProgram(index){openEditor(programCache.find(p=>p.index===index))}
 async function deleteProgram(index){if(confirm('Programm wirklich löschen?'))await post('/api/program/delete',{index})}
@@ -684,8 +861,9 @@ async function loadAll(){
      * loadPrograms() aktualisiert programCache und zeichnet danach
      * Zeitplan sowie das nächste Programm neu.
      */
-    await loadStatus();
+    await loadProfiles();
     await loadPrograms();
+    await loadStatus();
     await loadLog();
 }bindSettingsForms();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);
 </script>
@@ -799,6 +977,9 @@ void WebManager::configureRoutes()
     server_.on("/api/setup/portal/start", HTTP_POST, [this]() { handleSetupPortalStart(); });
     server_.on("/api/water/settings", HTTP_POST, [this]() { handleWaterSettings(); });
     server_.on("/api/water/reset", HTTP_POST, [this]() { handleWaterReset(); });
+    server_.on("/api/profiles", HTTP_GET, [this]() { handleProfiles(); });
+    server_.on("/api/profile/save", HTTP_POST, [this]() { handleProfileSave(); });
+    server_.on("/api/profiles/reset", HTTP_POST, [this]() { handleProfilesReset(); });
     server_.onNotFound([this]() { handleNotFound(); });
 }
 
@@ -1064,6 +1245,11 @@ void WebManager::handlePrograms()
         body += String(p.id);
         body += F(",\"valve\":");
         body += String(p.valveIndex);
+        body += F(",\"profileId\":");
+        body += String(p.profileId);
+        body += F(",\"profileName\":\"");
+        body += jsonEscape(String(GardenProfiles::name(p.profileId)));
+        body += F("\"");
         body += F(",\"hour\":");
         body += String(p.startHour);
         body += F(",\"minute\":");
@@ -1090,12 +1276,14 @@ void WebManager::handleCreateProgram()
         return;
     }
     const int valve = server_.hasArg("valve") ? server_.arg("valve").toInt() : 0;
+    const uint8_t profileId = server_.hasArg("profile") ? static_cast<uint8_t>(server_.arg("profile").toInt()) : 0;
     const int16_t index = scheduler_->createProgram(static_cast<uint8_t>(valve));
     if (index < 0)
     {
         sendJson(409, "{\"error\":\"Kein freier Programmplatz\"}");
         return;
     }
+    scheduler_->setProfile(static_cast<uint8_t>(index), profileId);
     if (server_.hasArg("hour") && server_.hasArg("minute"))
         scheduler_->setStartTime(static_cast<uint8_t>(index), server_.arg("hour").toInt(), server_.arg("minute").toInt());
     if (server_.hasArg("duration"))
@@ -1125,6 +1313,7 @@ void WebManager::handleUpdateProgram()
     const uint8_t i = static_cast<uint8_t>(index);
     bool ok = true;
     if (server_.hasArg("valve")) ok &= scheduler_->setValve(i, server_.arg("valve").toInt());
+    if (server_.hasArg("profile")) ok &= scheduler_->setProfile(i, server_.arg("profile").toInt());
     if (server_.hasArg("hour") && server_.hasArg("minute")) ok &= scheduler_->setStartTime(i, server_.arg("hour").toInt(), server_.arg("minute").toInt());
     if (server_.hasArg("duration")) ok &= scheduler_->setDurationMinutes(i, server_.arg("duration").toInt());
     if (server_.hasArg("days"))
@@ -1178,6 +1367,7 @@ void WebManager::handleCopyProgram()
         return;
     }
     const uint8_t t = static_cast<uint8_t>(targetIndex);
+    scheduler_->setProfile(t, source.profileId);
     scheduler_->setStartTime(t, source.startHour, source.startMinute);
     scheduler_->setDurationMinutes(t, static_cast<uint16_t>(source.durationSeconds / 60UL));
     for (uint8_t d = 0; d < 7; ++d)
@@ -1595,6 +1785,146 @@ void WebManager::handleWaterReset()
     Log.info(
         LogManager::Category::System,
         "Wasserzähler gelöscht"
+    );
+
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleProfiles()
+{
+    String body;
+    body.reserve(2200);
+    body += F("{\"profiles\":[");
+
+    for (uint8_t i = 0;
+         i < GardenProfiles::PROFILE_COUNT;
+         ++i)
+    {
+        if (i > 0)
+        {
+            body += ',';
+        }
+
+        const auto& profile =
+            GardenProfiles::profileByIndex(i);
+
+        body += F("{\"id\":");
+        body += String(i);
+        body += F(",\"name\":\"");
+        body += jsonEscape(profile.name);
+        body += F("\",\"symbol\":\"");
+        body += jsonEscape(profile.symbol);
+        body += F("\",\"correction\":");
+        body += String(profile.correctionPercent);
+        body += F(",\"temperature\":");
+        body += String(
+            profile.temperatureSensitivityPercent
+        );
+        body += F(",\"humidity\":");
+        body += String(
+            profile.humiditySensitivityPercent
+        );
+        body += F(",\"rain\":");
+        body += String(
+            profile.rainSensitivityPercent
+        );
+        body += F(",\"minimum\":");
+        body += String(profile.minimumMinutes);
+        body += F(",\"maximum\":");
+        body += String(profile.maximumMinutes);
+        body += '}';
+    }
+
+    body += F("]}");
+    sendJson(200, body);
+}
+
+void WebManager::handleProfileSave()
+{
+    const char* required[] =
+    {
+        "id",
+        "name",
+        "correction",
+        "temperature",
+        "humidity",
+        "rain",
+        "minimum",
+        "maximum"
+    };
+
+    for (const char* key : required)
+    {
+        if (!server_.hasArg(key))
+        {
+            sendJson(
+                400,
+                "{\"error\":\"Profildaten fehlen\"}"
+            );
+            return;
+        }
+    }
+
+    const uint8_t id =
+        static_cast<uint8_t>(
+            server_.arg("id").toInt()
+        );
+
+    const String symbol =
+        server_.hasArg("symbol")
+            ? server_.arg("symbol")
+            : String();
+
+    const bool saved = GardenProfiles::update(
+        id,
+        server_.arg("name"),
+        symbol,
+        static_cast<int16_t>(
+            server_.arg("correction").toInt()
+        ),
+        static_cast<uint8_t>(
+            server_.arg("temperature").toInt()
+        ),
+        static_cast<uint8_t>(
+            server_.arg("humidity").toInt()
+        ),
+        static_cast<uint8_t>(
+            server_.arg("rain").toInt()
+        ),
+        static_cast<uint16_t>(
+            server_.arg("minimum").toInt()
+        ),
+        static_cast<uint16_t>(
+            server_.arg("maximum").toInt()
+        )
+    );
+
+    if (!saved)
+    {
+        sendJson(
+            400,
+            "{\"error\":\"Ungültige Profilwerte\"}"
+        );
+        return;
+    }
+
+    Log.addf(
+        LogManager::Category::System,
+        LogManager::Level::Info,
+        "Gartenprofil %u gespeichert",
+        static_cast<unsigned>(id)
+    );
+
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleProfilesReset()
+{
+    GardenProfiles::resetDefaults();
+
+    Log.info(
+        LogManager::Category::System,
+        "Gartenprofile auf Standardwerte gesetzt"
     );
 
     sendJson(200, "{\"ok\":true}");

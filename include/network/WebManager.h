@@ -69,6 +69,9 @@ private:
     void handleSetupPortalStart();
     void handleWaterSettings();
     void handleWaterReset();
+    void handleProfiles();
+    void handleProfileSave();
+    void handleProfilesReset();
     void handleNotFound();
 
     void sendJson(int code, const String& body);

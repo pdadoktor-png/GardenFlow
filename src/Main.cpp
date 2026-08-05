@@ -15,6 +15,7 @@
 #include "settings/SettingsManager.h"
 #include "setup/SetupPortal.h"
 #include "advisor/AdvisorEngine.h"
+#include "profiles/GardenProfiles.h"
 #include "water/WaterManager.h"
 
 static ValveManager valveManager;
@@ -47,6 +48,7 @@ void setup()
     setupPortal.begin(settingsManager, wifiManager);
 
     valveManager.begin();
+    GardenProfiles::begin();
     scheduler.begin();
 
     if (setupPortal.isActive())
