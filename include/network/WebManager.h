@@ -11,6 +11,7 @@ class WeatherManager;
 class SmartControlManager;
 class SettingsManager;
 class AdvisorEngine;
+class WaterManager;
 
 class WebManager
 {
@@ -22,7 +23,8 @@ public:
                WeatherManager& weatherManager,
                SmartControlManager& smartControlManager,
                SettingsManager& settingsManager,
-               AdvisorEngine& advisorEngine);
+               AdvisorEngine& advisorEngine,
+               WaterManager& waterManager);
     void update();
     bool isStarted() const;
 
@@ -36,6 +38,7 @@ private:
     SmartControlManager* smartControlManager_ = nullptr;
     SettingsManager* settingsManager_ = nullptr;
     AdvisorEngine* advisorEngine_ = nullptr;
+    WaterManager* waterManager_ = nullptr;
     bool started_ = false;
     bool otaStarted_ = false;
     bool wifiWasConnected_ = false;
@@ -64,6 +67,8 @@ private:
     void handleSetupSettings();
     void handleSetupSave();
     void handleSetupPortalStart();
+    void handleWaterSettings();
+    void handleWaterReset();
     void handleNotFound();
 
     void sendJson(int code, const String& body);

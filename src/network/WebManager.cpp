@@ -13,6 +13,7 @@
 #include "log/LogManager.h"
 #include "settings/SettingsManager.h"
 #include "advisor/AdvisorEngine.h"
+#include "water/WaterManager.h"
 
 namespace
 {
@@ -44,7 +45,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .dashboardLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#9fb2a5}
 .dashboardValue{font-size:1.35rem;font-weight:800;margin-top:5px}
 .dashboardSub{font-size:.86rem;color:#b5c3ba;margin-top:4px}
-.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}
+.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
 
 .setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
@@ -106,12 +107,41 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <section class="card"><div class="muted">Wetter</div><div id="weatherMain" class="big">nicht eingerichtet</div><div id="weatherDetails" class="muted">API-Schluessel fehlt</div><div class="row"><span>Regenpause</span><span id="rainPause" class="badge">--</span></div><div style="margin-top:10px"><button class="secondary" onclick="post('/api/weather/refresh')">Aktualisieren</button></div></section>
   <section class="card"><div class="muted">Aktueller Lauf</div><div id="running" class="big">Kein Programm</div><div id="remaining" class="muted">--</div><div style="margin-top:12px"><button class="stop" id="stop" onclick="post('/api/stop')">STOPP</button></div></section>
   <section class="card"><div class="muted">Ventile</div><div id="valves"></div></section>
+  <section class="card" style="grid-column:1/-1;border-color:#4e765b">
+    <div class="top">
+      <div>
+        <div class="muted">Wasserbilanz</div>
+        <div class="big">Verbrauch und Kosten</div>
+      </div>
+      <span id="waterRunBadge" class="badge off">BEREIT</span>
+    </div>
+    <div class="waterGrid">
+      <div><div class="dashboardLabel">Heute</div><div id="waterToday" class="waterValue">0,0 l</div></div>
+      <div><div class="dashboardLabel">Woche</div><div id="waterWeek" class="waterValue">0,0 l</div></div>
+      <div><div class="dashboardLabel">Monat</div><div id="waterMonth" class="waterValue">0,0 l</div></div>
+      <div><div class="dashboardLabel">Jahr</div><div id="waterYear" class="waterValue">0,0 l</div></div>
+    </div>
+    <div class="row"><span>Aktueller Lauf</span><strong id="waterCurrentRun">0,0 l</strong></div>
+    <div class="row"><span>Eingespart</span><span id="waterSaved" class="badge ok">0,0 l</span></div>
+    <div class="row"><span>Kosten heute</span><span id="waterTodayCost">0,00 €</span></div>
+    <div class="setupNote">Die Zähler werden beim Programmende dauerhaft gespeichert. Während eines laufenden Programms wird der aktuelle Verbrauch bereits live angezeigt.</div>
+  </section>
 </div>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Wettersteuerung <span id="weatherDirtyMark" class="dirtyMark"></span></div><div class="big">Automatische Regenpause</div></div></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Automatik</span><select id="weatherEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Regenmenge 24 h (mm)</span><input id="weatherRainMm" type="number" min="0.1" max="100" step="0.1"></label><label class="field"><span>Regenwahrscheinlichkeit (%)</span><input id="weatherPop" type="number" min="1" max="100"></label><div class="field"><span>&nbsp;</span><div><button class="secondary" onclick="cancelWeatherSettings()">Abbrechen</button> <button onclick="saveWeatherSettings()">Speichern</button></div></div></div><div id="weatherSaveState" class="saveState"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Smart Control <span id="smartDirtyMark" class="dirtyMark"></span></div><div class="big">Saison & Urlaub</div></div><span id="vacationState" class="badge">--</span></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Saisonfaktor (%)</span><input id="seasonPercent" type="number" min="10" max="200" step="5"></label><label class="field"><span>Urlaubsmodus</span><select id="vacationEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Start</span><input id="vacationStart" type="date"></label><label class="field"><span>Ende</span><input id="vacationEnd" type="date"></label><label class="field"><span>Bewässern alle</span><select id="vacationEvery"><option value="1">jeden Tag</option><option value="2">2 Tage</option><option value="3">3 Tage</option><option value="4">4 Tage</option><option value="5">5 Tage</option><option value="6">6 Tage</option><option value="7">7 Tage</option></select></label><label class="field"><span>Laufzeit im Urlaub (%)</span><input id="vacationPercent" type="number" min="10" max="100" step="5"></label><div class="field full"><button class="secondary" onclick="cancelSmartSettings()">Abbrechen</button> <button onclick="saveSmartSettings()">Smart-Einstellungen speichern</button></div></div><div id="smartSaveState" class="saveState"></div></section>
 <section class="card nextProgram"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
+<section class="card" style="margin-top:12px">
+<div class="top"><div><div class="muted">Wasserbilanz</div><div class="big">Durchfluss & Kosten</div></div></div>
+<div class="formgrid" style="margin-top:12px">
+<label class="field"><span>Ventil 1 (Liter/Minute)</span><input id="waterFlow1" type="number" min="0" max="250" step="0.1"></label>
+<label class="field"><span>Ventil 2 (Liter/Minute)</span><input id="waterFlow2" type="number" min="0" max="250" step="0.1"></label>
+<label class="field"><span>Wasserpreis (Euro/m³)</span><input id="waterPrice" type="number" min="0" max="100" step="0.01"></label>
+<div class="field"><span>&nbsp;</span><div><button onclick="saveWaterSettings()">Speichern</button> <button class="stop" onclick="resetWaterStatistics()">Zähler löschen</button></div></div>
+</div>
+<div id="waterSaveState" class="saveState"></div>
+</section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Setup</div><div class="big">WLAN und Standort</div></div><span id="setupState" class="badge">--</span></div><div class="setupGrid"><label class="field"><span>WLAN-Name (SSID)</span><input id="setupSsid" maxlength="32" autocomplete="off"></label><label class="field"><span>WLAN-Passwort</span><input id="setupPassword" type="password" placeholder="leer = unverändert" autocomplete="new-password"></label><label class="field"><span>Breitengrad</span><input id="setupLatitude" type="number" min="-90" max="90" step="0.00001"></label><label class="field"><span>Längengrad</span><input id="setupLongitude" type="number" min="-180" max="180" step="0.00001"></label><label class="field full"><span>Zeitzone (POSIX)</span><input id="setupTimezone" value="CET-1CEST,M3.5.0/2,M10.5.0/3"></label></div><div class="setupNote">Deutschland: Der voreingestellte Zeitzonenwert berücksichtigt Sommer- und Winterzeit automatisch. Nach dem Speichern startet GardenFlow neu.</div><div style="margin-top:12px"><button onclick="saveSetup()">WLAN und Standort speichern</button> <button class="secondary" onclick="startSetupPortal()">Setup-Portal starten</button></div><div id="setupSaveState" class="saveState"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Diagnose</div><div class="big">Ereignisprotokoll</div></div><span id="logCount" class="badge">0</span></div><div class="logTools"><select id="logFilter" onchange="renderLog()"><option value="">Alle Kategorien</option><option>System</option><option>WLAN</option><option>Zeit</option><option>Wetter</option><option>Programm</option><option>Ventil</option><option>Scheduler</option><option>Fehler</option></select><input id="logSearch" placeholder="Suchen" oninput="renderLog()"><button class="secondary" onclick="loadLog()">Aktualisieren</button><button class="stop" onclick="clearLog()">Löschen</button></div><div id="logList" class="logList"><div class="muted" style="padding:10px">Protokoll wird geladen …</div></div></section>
 <div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
@@ -229,7 +259,85 @@ function updateDashboard(s){
     document.getElementById('dashValves').innerHTML=
         s.valves.map(v=>`<div class="dashboardValve"><span>${esc(v.name)}</span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET':(v.open?'OFFEN':'ZU')}</span></div>`).join('');
 }
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateAdvisor(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+function updateWater(s){
+    const liters=value=>Number(value||0).toFixed(1).replace('.',',')+' l';
+    const euro=value=>Number(value||0).toFixed(2).replace('.',',')+' €';
+    const live=Number(s.waterCurrentRun||0);
+    const storedToday=Number(s.waterToday||0);
+
+    const setText=(id,value)=>{
+        const element=document.getElementById(id);
+        if(element)element.textContent=value;
+    };
+
+    setText('waterToday',liters(storedToday+live));
+    setText('waterWeek',liters(Number(s.waterWeek||0)+live));
+    setText('waterMonth',liters(Number(s.waterMonth||0)+live));
+    setText('waterYear',liters(Number(s.waterYear||0)+live));
+    setText('waterCurrentRun',liters(live));
+    setText('waterSaved',liters(s.waterSaved));
+    setText('waterTodayCost',euro(Number(s.waterTodayCost||0)+Number(s.waterCurrentCost||0)));
+
+    const runBadge=document.getElementById('waterRunBadge');
+    if(runBadge){
+        runBadge.textContent=s.running?'LÄUFT':'BEREIT';
+        runBadge.className='badge '+(s.running?'warn':'ok');
+    }
+
+    const flow1=document.getElementById('waterFlow1');
+    const flow2=document.getElementById('waterFlow2');
+    const price=document.getElementById('waterPrice');
+
+    if(flow1&&document.activeElement!==flow1){
+        flow1.value=Number(s.waterFlow1||0).toFixed(1);
+    }
+    if(flow2&&document.activeElement!==flow2){
+        flow2.value=Number(s.waterFlow2||0).toFixed(1);
+    }
+    if(price&&document.activeElement!==price){
+        price.value=Number(s.waterPrice||0).toFixed(2);
+    }
+}
+
+async function saveWaterSettings(){
+    try{
+        const flow1=Number(document.getElementById('waterFlow1').value);
+        const flow2=Number(document.getElementById('waterFlow2').value);
+        const price=Number(document.getElementById('waterPrice').value);
+
+        if(!Number.isFinite(flow1)||flow1<0||flow1>250||
+           !Number.isFinite(flow2)||flow2<0||flow2>250||
+           !Number.isFinite(price)||price<0||price>100){
+            setSaveState('waterSaveState','Bitte gültige Werte eingeben','errmsg');
+            return;
+        }
+
+        await api('/api/water/settings',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:new URLSearchParams({flow1,flow2,price})
+        });
+
+        setSaveState('waterSaveState','Wasserdaten gespeichert','okmsg');
+        await loadStatus();
+    }catch(e){
+        setSaveState('waterSaveState','Fehler: '+e.message,'errmsg');
+    }
+}
+
+async function resetWaterStatistics(){
+    if(!confirm('Alle Wasserzähler wirklich löschen?'))return;
+
+    try{
+        await api('/api/water/reset',{method:'POST'});
+        setSaveState('waterSaveState','Wasserzähler gelöscht','okmsg');
+        await loadStatus();
+    }catch(e){
+        setSaveState('waterSaveState','Fehler: '+e.message,'errmsg');
+    }
+}
+
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -560,7 +668,8 @@ void WebManager::begin(Scheduler& scheduler,
                        WeatherManager& weatherManager,
                        SmartControlManager& smartControlManager,
                        SettingsManager& settingsManager,
-                       AdvisorEngine& advisorEngine)
+                       AdvisorEngine& advisorEngine,
+                       WaterManager& waterManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
@@ -570,6 +679,7 @@ void WebManager::begin(Scheduler& scheduler,
     smartControlManager_ = &smartControlManager;
     settingsManager_ = &settingsManager;
     advisorEngine_ = &advisorEngine;
+    waterManager_ = &waterManager;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
@@ -655,6 +765,8 @@ void WebManager::configureRoutes()
     server_.on("/api/setup/settings", HTTP_GET, [this]() { handleSetupSettings(); });
     server_.on("/api/setup/save", HTTP_POST, [this]() { handleSetupSave(); });
     server_.on("/api/setup/portal/start", HTTP_POST, [this]() { handleSetupPortalStart(); });
+    server_.on("/api/water/settings", HTTP_POST, [this]() { handleWaterSettings(); });
+    server_.on("/api/water/reset", HTTP_POST, [this]() { handleWaterReset(); });
     server_.onNotFound([this]() { handleNotFound(); });
 }
 
@@ -688,7 +800,7 @@ void WebManager::handleStatus()
 {
     if (!timeManager_ || !runtimeManager_ || !valveManager_ ||
         !scheduler_ || !weatherManager_ || !smartControlManager_ ||
-        !advisorEngine_)
+        !advisorEngine_ || !waterManager_)
     {
         sendJson(503, "{\"error\":\"System nicht bereit\"}");
         return;
@@ -700,7 +812,7 @@ void WebManager::handleStatus()
     timeManager_->formatDate(dateText, sizeof(dateText));
 
     String body;
-    body.reserve(2600);
+    body.reserve(3800);
     body += F("{\"wifi\":");
     body += timeManager_->isWifiConnected() ? F("true") : F("false");
     body += F(",\"timeValid\":");
@@ -815,7 +927,60 @@ void WebManager::handleStatus()
         body += '\"';
     }
 
-    body += F("],\"valves\":[");
+    body += F("],\"waterToday\":");
+    const WaterStatistics& water = waterManager_->statistics();
+    body += String(water.todayLiters, 2);
+    body += F(",\"waterWeek\":");
+    body += String(water.weekLiters, 2);
+    body += F(",\"waterMonth\":");
+    body += String(water.monthLiters, 2);
+    body += F(",\"waterYear\":");
+    body += String(water.yearLiters, 2);
+    body += F(",\"waterSaved\":");
+    body += String(water.savedLiters, 2);
+    body += F(",\"waterTodayCost\":");
+    body += String(water.todayCost, 3);
+    body += F(",\"waterMonthCost\":");
+    body += String(water.monthCost, 3);
+    body += F(",\"waterYearCost\":");
+    body += String(water.yearCost, 3);
+    body += F(",\"waterFlow1\":");
+    body += String(waterManager_->valveFlowRate(0), 2);
+    body += F(",\"waterFlow2\":");
+    body += String(waterManager_->valveFlowRate(1), 2);
+    body += F(",\"waterPrice\":");
+    body += String(waterManager_->waterPrice(), 2);
+
+    float currentRunLiters = 0.0f;
+    float currentRunCost = 0.0f;
+
+    if (runtimeManager_->isRunning())
+    {
+        const uint8_t runningValve =
+            runtimeManager_->runningValveIndex();
+
+        const uint32_t elapsedSeconds =
+            runtimeManager_->durationSeconds() -
+            runtimeManager_->remainingSeconds();
+
+        currentRunLiters =
+            waterManager_->valveFlowRate(runningValve) *
+            (
+                static_cast<float>(elapsedSeconds) /
+                60.0f
+            );
+
+        currentRunCost =
+            currentRunLiters *
+            waterManager_->waterPrice() /
+            1000.0f;
+    }
+
+    body += F(",\"waterCurrentRun\":");
+    body += String(currentRunLiters, 3);
+    body += F(",\"waterCurrentCost\":");
+    body += String(currentRunCost, 4);
+    body += F(",\"valves\":[");
 
     for (uint8_t i = 0; i < AppConfig::DISPLAYED_VALVE_COUNT; ++i)
     {
@@ -1321,6 +1486,80 @@ void WebManager::handleSetupPortalStart()
 
     restartRequestedAtMs_ = millis();
     sendJson(200, "{\"ok\":true,\"restart\":true}");
+}
+
+void WebManager::handleWaterSettings()
+{
+    if (waterManager_ == nullptr)
+    {
+        sendJson(
+            503,
+            "{\"error\":\"WaterManager nicht bereit\"}"
+        );
+        return;
+    }
+
+    if (!server_.hasArg("flow1") ||
+        !server_.hasArg("flow2") ||
+        !server_.hasArg("price"))
+    {
+        sendJson(
+            400,
+            "{\"error\":\"Wasserdaten fehlen\"}"
+        );
+        return;
+    }
+
+    const float flow1 =
+        server_.arg("flow1").toFloat();
+
+    const float flow2 =
+        server_.arg("flow2").toFloat();
+
+    const float price =
+        server_.arg("price").toFloat();
+
+    if (!waterManager_->
+            setValveFlowRate(0, flow1) ||
+        !waterManager_->
+            setValveFlowRate(1, flow2) ||
+        !waterManager_->
+            setWaterPrice(price))
+    {
+        sendJson(
+            400,
+            "{\"error\":\"Ungültige Wasserdaten\"}"
+        );
+        return;
+    }
+
+    Log.info(
+        LogManager::Category::System,
+        "Wasserdaten gespeichert"
+    );
+
+    sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleWaterReset()
+{
+    if (waterManager_ == nullptr)
+    {
+        sendJson(
+            503,
+            "{\"error\":\"WaterManager nicht bereit\"}"
+        );
+        return;
+    }
+
+    waterManager_->resetAll();
+
+    Log.info(
+        LogManager::Category::System,
+        "Wasserzähler gelöscht"
+    );
+
+    sendJson(200, "{\"ok\":true}");
 }
 
 void WebManager::handleNotFound()
