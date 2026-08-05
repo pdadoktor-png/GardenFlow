@@ -212,7 +212,39 @@ function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElem
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
 function signedPercent(value){const number=Number(value||0);return (number>0?'+':'')+number+' %';}
 function confidenceText(value){if(value>=85)return 'Sehr sicher';if(value>=70)return 'Sicher';if(value>=50)return 'Mittlere Sicherheit';return 'Geringe Sicherheit';}
-function advisorNextDuration(s){if(!s.advisorValid||!programCache.length)return '';const now=parseControllerNow();const next=allOccurrences(now,8)[0];if(!next)return '';const base=Number(next.program.durationMinutes||0);const factor=Math.max(0,100+Number(s.advisorAdjustment||0))/100;const recommended=s.advisorAdjustment<=-60?0:Math.max(1,Math.round(base*factor));return `Empfohlene Laufzeit für Programm ${next.program.id}: ${base} min → ${recommended} min`;}
+function advisorNextDuration(s){
+    if(!s.advisorValid||!programCache.length)return '';
+
+    const now=parseControllerNow();
+    const next=allOccurrences(now,8)[0];
+    if(!next)return '';
+
+    const standard=Number(next.program.durationMinutes||0);
+    const seasonPercent=Number(s.advisorSeasonPercent||100);
+    const weatherPercent=Number(s.advisorWeatherAdjustment||0);
+
+    const seasonal=Math.max(
+        1,
+        Math.round(standard*seasonPercent/100)
+    );
+
+    const recommended=
+        weatherPercent<=-60
+            ? 0
+            : Math.max(
+                1,
+                Math.round(
+                    seasonal*(100+weatherPercent)/100
+                )
+            );
+
+    if(recommended===0){
+        return `Programm ${next.program.id}: Standard ${standard} min → Saison ${seasonal} min → heute aussetzen`;
+    }
+
+    return `Programm ${next.program.id}: Standard ${standard} min → Saison ${seasonal} min → Wetter ${recommended} min`;
+}
+
 function updateAdvisor(s){
  const headline=document.getElementById('advisorHeadline'),summary=document.getElementById('advisorSummary'),narrative=document.getElementById('advisorNarrative'),badge=document.getElementById('advisorBadge'),factors=document.getElementById('advisorFactors'),reasons=document.getElementById('advisorReasons'),duration=document.getElementById('advisorDuration'),confidence=document.getElementById('advisorConfidenceText'),confidenceFill=document.getElementById('advisorConfidenceFill');
  headline.textContent=s.advisorHeadline||'Keine Empfehlung';summary.textContent=s.advisorSummary||'';narrative.textContent=s.advisorNarrative||'';
@@ -892,6 +924,12 @@ void WebManager::handleStatus()
     body += advisor.valid ? F("true") : F("false");
     body += F(",\"advisorAdjustment\":");
     body += String(advisor.adjustmentPercent);
+    body += F(",\"advisorWeatherAdjustment\":");
+    body += String(advisor.weatherAdjustmentPercent);
+    body += F(",\"advisorSeasonPercent\":");
+    body += String(advisor.seasonPercent);
+    body += F(",\"advisorCombinedPercent\":");
+    body += String(advisor.combinedPercent);
     body += F(",\"advisorConfidence\":");
     body += String(advisor.confidencePercent);
     body += F(",\"advisorHeadline\":\"");

@@ -29,6 +29,9 @@ struct AdvisorRecommendation
     bool valid = false;
     AdvisorAction action = AdvisorAction::NoData;
     int16_t adjustmentPercent = 0;
+    int16_t weatherAdjustmentPercent = 0;
+    uint16_t seasonPercent = 100;
+    uint16_t combinedPercent = 100;
     uint8_t confidencePercent = 0;
 
     String headline;
