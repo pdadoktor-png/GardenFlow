@@ -50,7 +50,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
 
-.profileGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}.profileCard{border:1px solid #36503f;border-radius:12px;padding:12px;background:#111a15aa}.profileCard h3{margin:0 0 10px}.profileFormula{margin-top:8px;color:#b9c9be;font-size:.84rem}.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
+.profileGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}.profileCard{border:1px solid #36503f;border-radius:12px;padding:12px;background:#111a15aa}.profileCard h3{margin:0 0 10px}.profileFormula{margin-top:8px;color:#b9c9be;font-size:.84rem}.simGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}.simResult{margin-top:14px;padding:14px;border:1px solid #4b7358;border-radius:12px;background:#102017}.simLine{display:grid;grid-template-columns:1fr auto;gap:10px;padding:6px 0;border-top:1px solid #294032}.simLine:first-child{border-top:0}.simFinal{font-size:1.4rem;font-weight:850;color:#9ce4ae}.rangeRow{display:grid;grid-template-columns:1fr 72px;gap:10px;align-items:center}input[type=range]{width:100%}@media(max-width:620px){.simGrid{grid-template-columns:1fr}}.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
 .setupGrid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-top:12px}
 @media(max-width:620px){.setupGrid{grid-template-columns:1fr}}
 
@@ -149,6 +149,27 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <section class="card" style="margin-top:12px">
 <div class="top">
   <div>
+    <div class="muted">Advisor-Simulator</div>
+    <div class="big">Was wäre wenn?</div><div style="margin-top:8px"><button class="secondary" onclick="resetAdvisorSimulator()">Live-Werte übernehmen</button></div>
+  </div>
+  <span class="badge off">NUR SIMULATION</span>
+</div>
+<div class="setupNote">Die Regler verändern weder Wetterdaten noch Programme. Sie zeigen ausschließlich, wie GardenFlow unter angenommenen Bedingungen empfehlen würde.</div>
+<div class="simGrid">
+  <label class="field"><span>Programm</span><select id="simProgram" onchange="selectSimulationProgram()"></select></label>
+  <label class="field"><span>Profil</span><select id="simProfile" onchange="runAdvisorSimulation()"></select></label>
+  <label class="field"><span>Temperatur</span><div class="rangeRow"><input id="simTemperature" type="range" min="-5" max="45" step="0.5" value="25" oninput="runAdvisorSimulation()"><strong id="simTemperatureValue">25 °C</strong></div></label>
+  <label class="field"><span>Luftfeuchte</span><div class="rangeRow"><input id="simHumidity" type="range" min="10" max="100" step="1" value="50" oninput="runAdvisorSimulation()"><strong id="simHumidityValue">50 %</strong></div></label>
+  <label class="field"><span>Regenmenge 24 h</span><div class="rangeRow"><input id="simRain" type="range" min="0" max="30" step="0.5" value="0" oninput="runAdvisorSimulation()"><strong id="simRainValue">0 mm</strong></div></label>
+  <label class="field"><span>Regenwahrscheinlichkeit</span><div class="rangeRow"><input id="simProbability" type="range" min="0" max="100" step="1" value="0" oninput="runAdvisorSimulation()"><strong id="simProbabilityValue">0 %</strong></div></label>
+  <label class="field"><span>Saisonfaktor</span><div class="rangeRow"><input id="simSeason" type="range" min="30" max="130" step="1" value="100" oninput="runAdvisorSimulation()"><strong id="simSeasonValue">100 %</strong></div></label>
+  <label class="field"><span>Standardlaufzeit</span><input id="simDuration" type="number" min="1" max="240" value="10" oninput="runAdvisorSimulation()"></label>
+</div>
+<div id="simResult" class="simResult"><div class="muted">Simulation wird vorbereitet …</div></div>
+</section>
+<section class="card" style="margin-top:12px">
+<div class="top">
+  <div>
     <div class="muted">Garden Profiles</div>
     <div class="big">Pflanzenprofile bearbeiten</div>
   </div>
@@ -238,6 +259,150 @@ function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElem
 window.addEventListener('beforeunload',e=>{if(weatherDirty||smartDirty){e.preventDefault();e.returnValue=''}});
 function signedPercent(value){const number=Number(value||0);return (number>0?'+':'')+number+' %';}
 function confidenceText(value){if(value>=85)return 'Sehr sicher';if(value>=70)return 'Sicher';if(value>=50)return 'Mittlere Sicherheit';return 'Geringe Sicherheit';}
+function simulationTemperatureContribution(value){
+    if(value>=35)return 30;
+    if(value>=30)return 20;
+    if(value>=26)return 10;
+    if(value<15)return -25;
+    if(value<18)return -10;
+    return 0;
+}
+
+function simulationHumidityContribution(value){
+    if(value<35)return 10;
+    if(value>80)return -10;
+    return 0;
+}
+
+function simulationRainContribution(mm,probability){
+    if(mm>=8||probability>=80)return -100;
+    if(mm>=2)return -25;
+    if(probability>=60)return -30;
+    if(probability>=40)return -15;
+    return 0;
+}
+
+let advisorSimulatorInitialized=false;
+
+function fillSimulatorSelectors(){
+    const programSelect=document.getElementById('simProgram');
+    const profileSelect=document.getElementById('simProfile');
+    if(!programSelect||!profileSelect)return;
+
+    const previousProgram=programSelect.value;
+    const previousProfile=profileSelect.value;
+
+    programSelect.innerHTML=programCache.map(program=>
+        `<option value="${program.index}">Programm ${program.id} · ${program.durationMinutes} min</option>`
+    ).join('')||'<option value="">Kein Programm</option>';
+
+    profileSelect.innerHTML=profileCache.map(profile=>
+        `<option value="${profile.id}">${esc(profile.name)}</option>`
+    ).join('');
+
+    if(programCache.some(p=>String(p.index)===previousProgram))programSelect.value=previousProgram;
+    if(profileCache.some(p=>String(p.id)===previousProfile))profileSelect.value=previousProfile;
+
+    const selected=programCache.find(
+        p=>String(p.index)===programSelect.value
+    )||programCache[0];
+
+    /*
+     * Nur beim ersten Laden echte Werte übernehmen.
+     * Spätere Status-/Programmakualisierungen dürfen die vom
+     * Benutzer eingestellten Simulationswerte nicht überschreiben.
+     */
+    if(!advisorSimulatorInitialized){
+        if(selected){
+            document.getElementById('simDuration').value=
+                selected.durationMinutes;
+            profileSelect.value=
+                String(selected.profileId||0);
+        }
+
+        if(lastStatus){
+            document.getElementById('simTemperature').value=
+                Number(lastStatus.temperature||25);
+            document.getElementById('simHumidity').value=
+                Number(lastStatus.humidity||50);
+            document.getElementById('simRain').value=
+                Number(lastStatus.rainMm||0);
+            document.getElementById('simProbability').value=
+                Number(lastStatus.rainProbability||0);
+            document.getElementById('simSeason').value=
+                Number(lastStatus.seasonPercent||100);
+        }
+
+        advisorSimulatorInitialized=true;
+    }
+
+    runAdvisorSimulation();
+}
+
+function resetAdvisorSimulator(){
+    advisorSimulatorInitialized=false;
+    fillSimulatorSelectors();
+}
+
+function selectSimulationProgram(){
+    const index=Number(document.getElementById('simProgram').value);
+    const program=programCache.find(item=>Number(item.index)===index);
+    if(!program)return;
+    document.getElementById('simDuration').value=program.durationMinutes;
+    document.getElementById('simProfile').value=String(program.profileId||0);
+    runAdvisorSimulation();
+}
+
+function runAdvisorSimulation(){
+    const result=document.getElementById('simResult');
+    if(!result)return;
+
+    const temperature=Number(document.getElementById('simTemperature').value);
+    const humidity=Number(document.getElementById('simHumidity').value);
+    const rainMm=Number(document.getElementById('simRain').value);
+    const probability=Number(document.getElementById('simProbability').value);
+    const season=Number(document.getElementById('simSeason').value);
+    const standard=Number(document.getElementById('simDuration').value||0);
+    const profile=profileById(Number(document.getElementById('simProfile').value));
+
+    document.getElementById('simTemperatureValue').textContent=temperature.toFixed(1)+' °C';
+    document.getElementById('simHumidityValue').textContent=humidity+' %';
+    document.getElementById('simRainValue').textContent=rainMm.toFixed(1)+' mm';
+    document.getElementById('simProbabilityValue').textContent=probability+' %';
+    document.getElementById('simSeasonValue').textContent=season+' %';
+
+    const rawTemperature=simulationTemperatureContribution(temperature);
+    const rawHumidity=simulationHumidityContribution(humidity);
+    const rawRain=simulationRainContribution(rainMm,probability);
+
+    const temperatureContribution=Math.round(rawTemperature*Number(profile.temperature||100)/100);
+    const humidityContribution=Math.round(rawHumidity*Number(profile.humidity||100)/100);
+    const rainContribution=Math.round(rawRain*Number(profile.rain||100)/100);
+    const weather=temperatureContribution+humidityContribution+rainContribution;
+
+    const seasonal=Math.max(1,Math.round(standard*season/100));
+    const profiled=Math.max(profile.minimum,Math.min(profile.maximum,
+        Math.round(seasonal*(100+Number(profile.correction||0))/100)));
+    const recommended=weather<=-60?0:Math.max(profile.minimum,Math.min(profile.maximum,
+        Math.round(profiled*(100+weather)/100)));
+
+    const recommendation=recommended===0?'Bewässerung aussetzen':
+        recommended>profiled?'Laufzeit erhöhen':recommended<profiled?'Laufzeit reduzieren':'Keine Wetteränderung';
+
+    const signed=value=>(value>0?'+':'')+value+' %';
+
+    result.innerHTML=`
+      <div class="simLine"><span>Profil</span><strong>${esc(profile.name)} (${signed(Number(profile.correction||0))})</strong></div>
+      <div class="simLine"><span>Standardlaufzeit</span><strong>${standard} min</strong></div>
+      <div class="simLine"><span>Saison ${season} %</span><strong>${seasonal} min</strong></div>
+      <div class="simLine"><span>Profilkorrektur</span><strong>${profiled} min</strong></div>
+      <div class="simLine"><span>Temperaturbeitrag</span><strong>${signed(temperatureContribution)}</strong></div>
+      <div class="simLine"><span>Luftfeuchtebeitrag</span><strong>${signed(humidityContribution)}</strong></div>
+      <div class="simLine"><span>Regenbeitrag</span><strong>${signed(rainContribution)}</strong></div>
+      <div class="simLine"><span>Wetterkorrektur gesamt</span><strong>${signed(weather)}</strong></div>
+      <div class="simLine"><span>${recommendation}</span><strong class="simFinal">${recommended===0?'PAUSE':recommended+' min'}</strong></div>`;
+}
+
 let profileCache=[];
 
 function profileById(id){
@@ -288,6 +453,7 @@ function renderProfileEditor(){
         ).join('');
         select.value=selected;
     }
+    fillSimulatorSelectors();
 }
 
 async function loadProfiles(){
@@ -559,7 +725,7 @@ async function resetWaterStatistics(){
     }
 }
 
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
