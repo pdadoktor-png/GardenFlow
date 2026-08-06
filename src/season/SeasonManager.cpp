@@ -251,7 +251,13 @@ float SeasonManager::interpolateFactor(float hours)
 
 String SeasonManager::formatMinutes(uint16_t minutes)
 {
-    char buffer[6] = {};
+    /*
+     * uint16_t erlaubt theoretisch mehr als 99 Stunden.
+     * Der größere Puffer verhindert deshalb zuverlässig eine
+     * mögliche Abschneidung und beseitigt -Wformat-truncation.
+     */
+    char buffer[9] = {};
+
     std::snprintf(
         buffer,
         sizeof(buffer),
@@ -259,5 +265,6 @@ String SeasonManager::formatMinutes(uint16_t minutes)
         static_cast<unsigned>(minutes / 60U),
         static_cast<unsigned>(minutes % 60U)
     );
+
     return String(buffer);
 }
