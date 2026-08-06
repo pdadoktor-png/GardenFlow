@@ -1,4 +1,5 @@
 #include "smart/SmartControlManager.h"
+#include "season/SeasonManager.h"
 
 namespace
 {
@@ -13,12 +14,37 @@ void SmartControlManager::begin()
     Serial.println("SmartControlManager initialisiert");
 }
 
+void SmartControlManager::setSeasonManager(SeasonManager& seasonManager)
+{
+    seasonManager_ = &seasonManager;
+}
+
 bool SmartControlManager::vacationEnabled() const { return vacationEnabled_; }
 uint32_t SmartControlManager::vacationStartDate() const { return vacationStartDate_; }
 uint32_t SmartControlManager::vacationEndDate() const { return vacationEndDate_; }
 uint8_t SmartControlManager::vacationIntervalDays() const { return vacationIntervalDays_; }
 uint8_t SmartControlManager::vacationPercent() const { return vacationPercent_; }
-uint8_t SmartControlManager::seasonPercent() const { return seasonPercent_; }
+uint8_t SmartControlManager::seasonPercent() const
+{
+    if (seasonAutomatic_ &&
+        seasonManager_ != nullptr &&
+        seasonManager_->isValid())
+    {
+        return seasonManager_->seasonPercent();
+    }
+
+    return seasonPercent_;
+}
+
+uint8_t SmartControlManager::manualSeasonPercent() const
+{
+    return seasonPercent_;
+}
+
+bool SmartControlManager::seasonAutomatic() const
+{
+    return seasonAutomatic_;
+}
 
 void SmartControlManager::setVacationEnabled(bool enabled)
 {
@@ -51,6 +77,12 @@ void SmartControlManager::setVacationPercent(uint8_t percent)
 void SmartControlManager::setSeasonPercent(uint8_t percent)
 {
     seasonPercent_ = constrain(percent, MIN_PERCENT, MAX_SEASON_PERCENT);
+    save();
+}
+
+void SmartControlManager::setSeasonAutomatic(bool automatic)
+{
+    seasonAutomatic_ = automatic;
     save();
 }
 
@@ -142,6 +174,7 @@ void SmartControlManager::load()
         MIN_PERCENT,
         MAX_SEASON_PERCENT
     );
+    seasonAutomatic_ = preferences_.getBool("seasonAuto", true);
 }
 
 void SmartControlManager::save()
@@ -152,6 +185,7 @@ void SmartControlManager::save()
     preferences_.putUChar("vacEvery", vacationIntervalDays_);
     preferences_.putUChar("vacPercent", vacationPercent_);
     preferences_.putUChar("season", seasonPercent_);
+    preferences_.putBool("seasonAuto", seasonAutomatic_);
 }
 
 time_t SmartControlManager::dateKeyToEpoch(uint32_t value)

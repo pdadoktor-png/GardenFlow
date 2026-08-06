@@ -29,6 +29,7 @@ public:
         bool used = false;
         bool enabled = false;
         uint8_t valveIndex = 0;
+        uint8_t profileId = 0;
         uint8_t startHour = 6;
         uint8_t startMinute = 0;
         uint32_t durationSeconds = 15UL * 60UL;
@@ -56,6 +57,7 @@ public:
 
     bool setProgramEnabled(uint8_t index, bool enabled);
     bool setValve(uint8_t programIndex, uint8_t valveIndex);
+    bool setProfile(uint8_t programIndex, uint8_t profileId);
     bool setStartTime(uint8_t programIndex, uint8_t hour, uint8_t minute);
     bool setDurationMinutes(uint8_t programIndex, uint16_t minutes);
     uint16_t durationMinutes(uint8_t programIndex) const;
@@ -69,7 +71,8 @@ public:
 private:
     static constexpr uint32_t LEGACY_STORAGE_VERSION_1 = 1;
     static constexpr uint32_t LEGACY_STORAGE_VERSION_2 = 2;
-    static constexpr uint32_t STORAGE_VERSION = 3;
+    static constexpr uint32_t LEGACY_STORAGE_VERSION_3 = 3;
+    static constexpr uint32_t STORAGE_VERSION = 4;
 
     struct LegacyIrrigationProgramV1
     {
@@ -96,6 +99,20 @@ private:
         uint32_t startedAtMs = 0;
     };
 
+    struct LegacyIrrigationProgramV3
+    {
+        uint32_t id = INVALID_PROGRAM_ID;
+        bool used = false;
+        bool enabled = false;
+        uint8_t valveIndex = 0;
+        uint8_t startHour = 6;
+        uint8_t startMinute = 0;
+        uint32_t durationSeconds = 15UL * 60UL;
+        uint8_t weekdays = 0;
+        bool running = false;
+        uint32_t startedAtMs = 0;
+    };
+
     Preferences preferences_;
     IrrigationProgram programs_[MAX_PROGRAMS];
     uint32_t nextProgramId_ = 1;
@@ -103,6 +120,7 @@ private:
     bool loadCurrentVersion();
     bool migrateFromVersion1();
     bool migrateFromVersion2();
+    bool migrateFromVersion3();
     void resetRuntimeState();
     uint32_t allocateProgramId();
     int16_t findFreeSlot() const;

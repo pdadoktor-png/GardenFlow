@@ -1,4 +1,5 @@
 #include "Scheduler.h"
+#include "profiles/GardenProfiles.h"
 
 namespace
 {
@@ -101,6 +102,7 @@ int16_t Scheduler::createProgram(uint8_t valveIndex)
     created.id = allocateProgramId();
     created.used = true;
     created.valveIndex = valveIndex;
+    created.profileId = 0;
     created.startHour = 6;
     created.startMinute = 0;
     created.durationSeconds = 15UL * 60UL;
@@ -175,6 +177,14 @@ bool Scheduler::setValve(uint8_t programIndex, uint8_t valveIndex)
         return true;
     }
     programs_[programIndex].valveIndex = valveIndex;
+    return save();
+}
+
+bool Scheduler::setProfile(uint8_t programIndex, uint8_t profileId)
+{
+    if (!validUsedProgramIndex(programIndex) || !GardenProfiles::isValid(profileId)) return false;
+    if (programs_[programIndex].profileId == profileId) return true;
+    programs_[programIndex].profileId = profileId;
     return save();
 }
 
@@ -287,6 +297,11 @@ bool Scheduler::load()
     {
         return loadCurrentVersion();
     }
+    if (version == LEGACY_STORAGE_VERSION_3)
+    {
+        Serial.println("Migriere Scheduler-Speicherversion 3 auf 4");
+        return migrateFromVersion3();
+    }
     if (version == LEGACY_STORAGE_VERSION_2)
     {
         Serial.println("Migriere Scheduler-Speicherversion 2 auf 3");
@@ -348,6 +363,24 @@ bool Scheduler::migrateFromVersion1()
     return save();
 }
 
+bool Scheduler::migrateFromVersion3()
+{
+    LegacyIrrigationProgramV3 legacy[MAX_PROGRAMS];
+    const size_t expected=sizeof(legacy);
+    if(preferences_.getBytesLength(KEY_PROGRAMS)!=expected||preferences_.getBytes(KEY_PROGRAMS,legacy,expected)!=expected)return false;
+    nextProgramId_=preferences_.getUInt(KEY_NEXT_ID,1);
+    for(uint8_t i=0;i<MAX_PROGRAMS;++i){
+        programs_[i]=IrrigationProgram{};
+        programs_[i].id=legacy[i].id; programs_[i].used=legacy[i].used; programs_[i].enabled=legacy[i].enabled;
+        programs_[i].valveIndex=validValveIndex(legacy[i].valveIndex)?legacy[i].valveIndex:0;
+        programs_[i].profileId=0; programs_[i].startHour=legacy[i].startHour<=23?legacy[i].startHour:6;
+        programs_[i].startMinute=legacy[i].startMinute<=59?legacy[i].startMinute:0;
+        programs_[i].durationSeconds=legacy[i].durationSeconds; programs_[i].weekdays=legacy[i].weekdays&0x7F;
+        if(programs_[i].used&&programs_[i].id>=nextProgramId_)nextProgramId_=programs_[i].id+1;
+    }
+    resetRuntimeState(); return save();
+}
+
 bool Scheduler::migrateFromVersion2()
 {
     LegacyIrrigationProgramV2 legacy[MAX_PROGRAMS];
@@ -396,6 +429,7 @@ void Scheduler::restoreDefaults()
     programs_[0].used = true;
     programs_[0].enabled = true;
     programs_[0].valveIndex = 0;
+    programs_[0].profileId = 1;
     programs_[0].startHour = 6;
     programs_[0].startMinute = 30;
     programs_[0].durationSeconds = 15UL * 60UL;
@@ -405,6 +439,7 @@ void Scheduler::restoreDefaults()
     programs_[1].used = true;
     programs_[1].enabled = false;
     programs_[1].valveIndex = 1;
+    programs_[1].profileId = 2;
     programs_[1].startHour = 20;
     programs_[1].startMinute = 0;
     programs_[1].durationSeconds = 10UL * 60UL;

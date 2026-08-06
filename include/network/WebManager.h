@@ -12,6 +12,7 @@ class SmartControlManager;
 class SettingsManager;
 class AdvisorEngine;
 class WaterManager;
+class SeasonManager;
 
 class WebManager
 {
@@ -24,7 +25,8 @@ public:
                SmartControlManager& smartControlManager,
                SettingsManager& settingsManager,
                AdvisorEngine& advisorEngine,
-               WaterManager& waterManager);
+               WaterManager& waterManager,
+               SeasonManager& seasonManager);
     void update();
     bool isStarted() const;
 
@@ -39,6 +41,7 @@ private:
     SettingsManager* settingsManager_ = nullptr;
     AdvisorEngine* advisorEngine_ = nullptr;
     WaterManager* waterManager_ = nullptr;
+    SeasonManager* seasonManager_ = nullptr;
     bool started_ = false;
     bool otaStarted_ = false;
     bool wifiWasConnected_ = false;

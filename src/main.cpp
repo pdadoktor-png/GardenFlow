@@ -15,7 +15,9 @@
 #include "settings/SettingsManager.h"
 #include "setup/SetupPortal.h"
 #include "advisor/AdvisorEngine.h"
+#include "profiles/GardenProfiles.h"
 #include "water/WaterManager.h"
+#include "season/SeasonManager.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -30,6 +32,7 @@ static SettingsManager settingsManager;
 static SetupPortal setupPortal;
 static AdvisorEngine advisorEngine;
 static WaterManager waterManager;
+static SeasonManager seasonManager;
 
 void setup()
 {
@@ -47,6 +50,7 @@ void setup()
     setupPortal.begin(settingsManager, wifiManager);
 
     valveManager.begin();
+    GardenProfiles::begin();
     scheduler.begin();
 
     if (setupPortal.isActive())
@@ -57,9 +61,11 @@ void setup()
     {
         timeManager.begin(settingsManager);
         waterManager.begin(timeManager);
+        seasonManager.begin(timeManager, settingsManager);
         runtimeManager.begin(scheduler, valveManager, timeManager);
         weatherManager.begin(timeManager, settingsManager);
         smartControlManager.begin();
+        smartControlManager.setSeasonManager(seasonManager);
         advisorEngine.begin(
             weatherManager,
             smartControlManager
@@ -85,7 +91,8 @@ void setup()
             smartControlManager,
             settingsManager,
             advisorEngine,
-            waterManager);
+            waterManager,
+            seasonManager);
 
         Log.begin(&timeManager);
         Log.info(LogManager::Category::System, "GardenFlow gestartet");
@@ -108,6 +115,7 @@ void loop()
 
     timeManager.update();
     weatherManager.update();
+    seasonManager.update();
     advisorEngine.update();
     waterManager.update();
     runtimeManager.update();

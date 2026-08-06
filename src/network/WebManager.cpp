@@ -15,6 +15,7 @@
 #include "advisor/AdvisorEngine.h"
 #include "water/WaterManager.h"
 #include "profiles/GardenProfiles.h"
+#include "season/SeasonManager.h"
 
 namespace
 {
@@ -129,7 +130,19 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   </section>
 </div>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Wettersteuerung <span id="weatherDirtyMark" class="dirtyMark"></span></div><div class="big">Automatische Regenpause</div></div></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Automatik</span><select id="weatherEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Regenmenge 24 h (mm)</span><input id="weatherRainMm" type="number" min="0.1" max="100" step="0.1"></label><label class="field"><span>Regenwahrscheinlichkeit (%)</span><input id="weatherPop" type="number" min="1" max="100"></label><div class="field"><span>&nbsp;</span><div><button class="secondary" onclick="cancelWeatherSettings()">Abbrechen</button> <button onclick="saveWeatherSettings()">Speichern</button></div></div></div><div id="weatherSaveState" class="saveState"></div></section>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Smart Control <span id="smartDirtyMark" class="dirtyMark"></span></div><div class="big">Saison & Urlaub</div></div><span id="vacationState" class="badge">--</span></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Saisonfaktor (%)</span><input id="seasonPercent" type="number" min="10" max="200" step="5"></label><label class="field"><span>Urlaubsmodus</span><select id="vacationEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Start</span><input id="vacationStart" type="date"></label><label class="field"><span>Ende</span><input id="vacationEnd" type="date"></label><label class="field"><span>Bewässern alle</span><select id="vacationEvery"><option value="1">jeden Tag</option><option value="2">2 Tage</option><option value="3">3 Tage</option><option value="4">4 Tage</option><option value="5">5 Tage</option><option value="6">6 Tage</option><option value="7">7 Tage</option></select></label><label class="field"><span>Laufzeit im Urlaub (%)</span><input id="vacationPercent" type="number" min="10" max="100" step="5"></label><div class="field full"><button class="secondary" onclick="cancelSmartSettings()">Abbrechen</button> <button onclick="saveSmartSettings()">Smart-Einstellungen speichern</button></div></div><div id="smartSaveState" class="saveState"></div></section>
+<section class="card" style="margin-top:12px">
+<div class="top"><div><div class="muted">Smart Control <span id="smartDirtyMark" class="dirtyMark"></span></div><div class="big">Saison & Urlaub</div></div><span id="vacationState" class="badge">--</span></div>
+<div class="formgrid" style="margin-top:12px">
+<label class="field"><span>Saisonsteuerung</span><select id="seasonAutomatic"><option value="1">Automatisch aus Standort & Datum</option><option value="0">Manueller Faktor</option></select></label>
+<label class="field"><span>Manueller Saisonfaktor (%)</span><input id="seasonPercent" type="number" min="10" max="200" step="5"></label>
+<div class="field full"><div id="seasonAutoInfo" class="advisorNarrative">Saisonberechnung wird geladen …</div></div>
+<label class="field"><span>Urlaubsmodus</span><select id="vacationEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label>
+<label class="field"><span>Start</span><input id="vacationStart" type="date"></label>
+<label class="field"><span>Ende</span><input id="vacationEnd" type="date"></label>
+<label class="field"><span>Bewässern alle</span><select id="vacationEvery"><option value="1">jeden Tag</option><option value="2">2 Tage</option><option value="3">3 Tage</option><option value="4">4 Tage</option><option value="5">5 Tage</option><option value="6">6 Tage</option><option value="7">7 Tage</option></select></label>
+<label class="field"><span>Laufzeit im Urlaub (%)</span><input id="vacationPercent" type="number" min="10" max="100" step="5"></label>
+<div class="field full"><button class="secondary" onclick="cancelSmartSettings()">Abbrechen</button> <button onclick="saveSmartSettings()">Smart-Einstellungen speichern</button></div>
+</div><div id="smartSaveState" class="saveState"></div></section>
 <section class="card nextProgram"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
@@ -213,12 +226,12 @@ function badge(id,text,cls){const e=document.getElementById(id);e.textContent=te
 function dateKeyToInput(v){const s=String(v||0).padStart(8,'0');return v?`${s.slice(0,4)}-${s.slice(4,6)}-${s.slice(6,8)}`:''}
 let weatherDirty=false,smartDirty=false,lastStatus=null;
 const weatherFields=['weatherEnabled','weatherRainMm','weatherPop'];
-const smartFields=['seasonPercent','vacationEnabled','vacationStart','vacationEnd','vacationEvery','vacationPercent'];
+const smartFields=['seasonAutomatic','seasonPercent','vacationEnabled','vacationStart','vacationEnd','vacationEvery','vacationPercent'];
 function setSaveState(id,text,kind=''){const e=document.getElementById(id);e.textContent=text;e.className='saveState '+kind}
 function markWeatherDirty(){weatherDirty=true;document.getElementById('weatherDirtyMark').textContent='• ungespeichert';setSaveState('weatherSaveState','Änderungen noch nicht gespeichert')}
 function markSmartDirty(){smartDirty=true;document.getElementById('smartDirtyMark').textContent='• ungespeichert';setSaveState('smartSaveState','Änderungen noch nicht gespeichert')}
 function fillWeatherForm(s){document.getElementById('weatherEnabled').value=s.weatherPauseEnabled?'1':'0';document.getElementById('weatherRainMm').value=s.weatherRainLimit;document.getElementById('weatherPop').value=s.weatherProbabilityLimit}
-function fillSmartForm(s){document.getElementById('seasonPercent').value=s.seasonPercent;document.getElementById('vacationEnabled').value=s.vacationEnabled?'1':'0';document.getElementById('vacationStart').value=dateKeyToInput(s.vacationStart);document.getElementById('vacationEnd').value=dateKeyToInput(s.vacationEnd);document.getElementById('vacationEvery').value=String(s.vacationEvery);document.getElementById('vacationPercent').value=s.vacationPercent}
+function fillSmartForm(s){document.getElementById('seasonAutomatic').value=s.seasonAutomatic?'1':'0';document.getElementById('seasonPercent').value=s.manualSeasonPercent;document.getElementById('seasonPercent').disabled=s.seasonAutomatic;document.getElementById('seasonAutoInfo').textContent=s.seasonAutomatic?(s.seasonName+' · '+s.seasonPercent+' % · '+s.seasonExplanation):('Manueller Saisonfaktor aktiv: '+s.manualSeasonPercent+' %');document.getElementById('vacationEnabled').value=s.vacationEnabled?'1':'0';document.getElementById('vacationStart').value=dateKeyToInput(s.vacationStart);document.getElementById('vacationEnd').value=dateKeyToInput(s.vacationEnd);document.getElementById('vacationEvery').value=String(s.vacationEvery);document.getElementById('vacationPercent').value=s.vacationPercent}
 function cancelWeatherSettings(){if(lastStatus)fillWeatherForm(lastStatus);weatherDirty=false;document.getElementById('weatherDirtyMark').textContent='';setSaveState('weatherSaveState','Änderungen verworfen')}
 function cancelSmartSettings(){if(lastStatus)fillSmartForm(lastStatus);smartDirty=false;document.getElementById('smartDirtyMark').textContent='';setSaveState('smartSaveState','Änderungen verworfen')}
 function bindSettingsForms(){weatherFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markWeatherDirty);e.addEventListener('change',markWeatherDirty)});smartFields.forEach(id=>{const e=document.getElementById(id);e.addEventListener('input',markSmartDirty);e.addEventListener('change',markSmartDirty)})}
@@ -761,6 +774,7 @@ async function saveSmartSettings(){
             method:'POST',
             headers:{'Content-Type':'application/x-www-form-urlencoded'},
             body:new URLSearchParams({
+                seasonAuto:Number(document.getElementById('seasonAutomatic').value),
                 season:Number(document.getElementById('seasonPercent').value),
                 enabled:enabled,
                 start:start,
@@ -879,7 +893,8 @@ void WebManager::begin(Scheduler& scheduler,
                        SmartControlManager& smartControlManager,
                        SettingsManager& settingsManager,
                        AdvisorEngine& advisorEngine,
-                       WaterManager& waterManager)
+                       WaterManager& waterManager,
+                       SeasonManager& seasonManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
@@ -890,6 +905,7 @@ void WebManager::begin(Scheduler& scheduler,
     settingsManager_ = &settingsManager;
     advisorEngine_ = &advisorEngine;
     waterManager_ = &waterManager;
+    seasonManager_ = &seasonManager;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
@@ -1013,7 +1029,7 @@ void WebManager::handleStatus()
 {
     if (!timeManager_ || !runtimeManager_ || !valveManager_ ||
         !scheduler_ || !weatherManager_ || !smartControlManager_ ||
-        !advisorEngine_ || !waterManager_)
+        !advisorEngine_ || !waterManager_ || !seasonManager_)
     {
         sendJson(503, "{\"error\":\"System nicht bereit\"}");
         return;
@@ -1085,6 +1101,23 @@ void WebManager::handleStatus()
     timeManager_->getLocalTime(smartLocal);
     body += F(",\"seasonPercent\":");
     body += String(smartControlManager_->seasonPercent());
+    body += F(",\"manualSeasonPercent\":");
+    body += String(smartControlManager_->manualSeasonPercent());
+    body += F(",\"seasonAutomatic\":");
+    body += smartControlManager_->seasonAutomatic() ? F("true") : F("false");
+    body += F(",\"seasonValid\":");
+    body += seasonManager_->isValid() ? F("true") : F("false");
+    body += F(",\"seasonName\":\"");
+    body += jsonEscape(seasonManager_->seasonName());
+    body += F("\",\"seasonDayLength\":");
+    body += String(seasonManager_->dayLengthHours(), 2);
+    body += F(",\"seasonSunrise\":");
+    body += String(seasonManager_->sunriseMinutes());
+    body += F(",\"seasonSunset\":");
+    body += String(seasonManager_->sunsetMinutes());
+    body += F(",\"seasonExplanation\":\"");
+    body += jsonEscape(seasonManager_->explanation());
+    body += '"';
     body += F(",\"vacationEnabled\":");
     body += smartControlManager_->vacationEnabled() ? F("true") : F("false");
     body += F(",\"vacationActive\":");
@@ -1507,6 +1540,11 @@ void WebManager::handleSmartSettings()
         return;
     }
 
+    const bool seasonAutomatic =
+        server_.hasArg("seasonAuto")
+            ? server_.arg("seasonAuto").toInt() != 0
+            : smartControlManager_->seasonAutomatic();
+
     const bool vacationEnabled =
         server_.hasArg("enabled") &&
         server_.arg("enabled").toInt() != 0;
@@ -1514,7 +1552,7 @@ void WebManager::handleSmartSettings()
     const uint8_t seasonPercent =
         server_.hasArg("season")
             ? static_cast<uint8_t>(server_.arg("season").toInt())
-            : smartControlManager_->seasonPercent();
+            : smartControlManager_->manualSeasonPercent();
 
     const uint8_t intervalDays =
         server_.hasArg("every")
@@ -1555,6 +1593,7 @@ void WebManager::handleSmartSettings()
         }
     }
 
+    smartControlManager_->setSeasonAutomatic(seasonAutomatic);
     smartControlManager_->setSeasonPercent(seasonPercent);
     smartControlManager_->setVacationIntervalDays(intervalDays);
     smartControlManager_->setVacationPercent(vacationPercent);

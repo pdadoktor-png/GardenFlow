@@ -4,10 +4,13 @@
 #include <Preferences.h>
 #include <time.h>
 
+class SeasonManager;
+
 class SmartControlManager
 {
 public:
     void begin();
+    void setSeasonManager(SeasonManager& seasonManager);
 
     bool vacationEnabled() const;
     uint32_t vacationStartDate() const;
@@ -15,12 +18,15 @@ public:
     uint8_t vacationIntervalDays() const;
     uint8_t vacationPercent() const;
     uint8_t seasonPercent() const;
+    uint8_t manualSeasonPercent() const;
+    bool seasonAutomatic() const;
 
     void setVacationEnabled(bool enabled);
     void setVacationDates(uint32_t startDate, uint32_t endDate);
     void setVacationIntervalDays(uint8_t days);
     void setVacationPercent(uint8_t percent);
     void setSeasonPercent(uint8_t percent);
+    void setSeasonAutomatic(bool automatic);
 
     bool vacationActive(const struct tm& localTime) const;
     bool automaticRunAllowed(const struct tm& localTime) const;
@@ -31,6 +37,7 @@ public:
 
 private:
     Preferences preferences_;
+    SeasonManager* seasonManager_ = nullptr;
 
     bool vacationEnabled_ = false;
     uint32_t vacationStartDate_ = 0;
@@ -38,6 +45,7 @@ private:
     uint8_t vacationIntervalDays_ = 1;
     uint8_t vacationPercent_ = 100;
     uint8_t seasonPercent_ = 100;
+    bool seasonAutomatic_ = true;
 
     void load();
     void save();
