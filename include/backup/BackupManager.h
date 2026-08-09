@@ -20,7 +20,7 @@ public:
         SeasonManager& seasonManager,
         AdvisorEngine& advisorEngine);
 
-    String createBackupJson();
+    String createBackupJson() const;
 
 private:
     SettingsManager* settingsManager_ = nullptr;
@@ -29,4 +29,7 @@ private:
     WaterManager* waterManager_ = nullptr;
     SeasonManager* seasonManager_ = nullptr;
     AdvisorEngine* advisorEngine_ = nullptr;
+
+    static String jsonEscape(const String& value);
+    bool ready() const;
 };

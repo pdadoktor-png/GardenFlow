@@ -16,6 +16,7 @@
 #include "water/WaterManager.h"
 #include "profiles/GardenProfiles.h"
 #include "season/SeasonManager.h"
+#include "backup/BackupManager.h"
 
 namespace
 {
@@ -1060,7 +1061,8 @@ void WebManager::begin(Scheduler& scheduler,
                        SettingsManager& settingsManager,
                        AdvisorEngine& advisorEngine,
                        WaterManager& waterManager,
-                       SeasonManager& seasonManager)
+                       SeasonManager& seasonManager,
+                       BackupManager& backupManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
@@ -1072,6 +1074,7 @@ void WebManager::begin(Scheduler& scheduler,
     advisorEngine_ = &advisorEngine;
     waterManager_ = &waterManager;
     seasonManager_ = &seasonManager;
+    backupManager_ = &backupManager;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
@@ -1140,6 +1143,14 @@ void WebManager::configureRoutes()
 {
     server_.on("/", HTTP_GET, [this]() { handleRoot(); });
     server_.on("/api/status", HTTP_GET, [this]() { handleStatus(); });
+    server_.on("/api/backup", HTTP_GET, [this]() {
+        if (backupManager_ == nullptr)
+        {
+            sendJson(503, "{\"error\":\"BackupManager nicht bereit\"}");
+            return;
+        }
+        sendJson(200, backupManager_->createBackupJson());
+    });
     server_.on("/api/programs", HTTP_GET, [this]() { handlePrograms(); });
     server_.on("/api/program/create", HTTP_POST, [this]() { handleCreateProgram(); });
     server_.on("/api/program/update", HTTP_POST, [this]() { handleUpdateProgram(); });
