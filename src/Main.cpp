@@ -18,6 +18,7 @@
 #include "profiles/GardenProfiles.h"
 #include "water/WaterManager.h"
 #include "season/SeasonManager.h"
+#include "backup/BackupManager.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -33,6 +34,7 @@ static SetupPortal setupPortal;
 static AdvisorEngine advisorEngine;
 static WaterManager waterManager;
 static SeasonManager seasonManager;
+static BackupManager backupManager;
 
 void setup()
 {
@@ -52,7 +54,15 @@ void setup()
     valveManager.begin();
     GardenProfiles::begin();
     scheduler.begin();
-
+    
+    backupManager.begin(
+        settingsManager,
+        weatherManager,
+        scheduler,
+        waterManager,
+        seasonManager,
+        advisorEngine
+    );
     if (setupPortal.isActive())
     {
         Serial.println("Setupbetrieb: normaler WLAN- und Webbetrieb pausiert");
