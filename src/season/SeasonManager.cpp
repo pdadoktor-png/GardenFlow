@@ -106,17 +106,56 @@ void SeasonManager::calculate(const struct tm& local)
     const int dayOfYear = local.tm_yday + 1;
     const float latitudeRad = latitude * DEG_TO_RAD_F;
 
-    // Näherung der Sonnen-Deklination für den aktuellen Kalendertag.
-    const float declination =
-        23.44f * DEG_TO_RAD_F *
-        std::sin(
-            2.0f * PI_F *
-            (284.0f + static_cast<float>(dayOfYear)) /
-            365.0f
+    /*
+     * Sonnenauf- und -untergang nach der NOAA-Näherung.
+     *
+     * Anders als die bisherige Berechnung berücksichtigt sie:
+     * - geografische Länge,
+     * - Zeitgleichung,
+     * - lokale Zeitzone inklusive Sommerzeit,
+     * - atmosphärische Refraktion (Zenit 90,833°).
+     *
+     * Dadurch bleibt die Tageslänge für den Saisonfaktor erhalten,
+     * die angezeigten Uhrzeiten liegen aber korrekt auf der lokalen Uhr.
+     */
+    const float gamma =
+        2.0f * PI_F / 365.0f *
+        static_cast<float>(dayOfYear - 1);
+
+    const float equationOfTimeMinutes =
+        229.18f *
+        (
+            0.000075f +
+            0.001868f * std::cos(gamma) -
+            0.032077f * std::sin(gamma) -
+            0.014615f * std::cos(2.0f * gamma) -
+            0.040849f * std::sin(2.0f * gamma)
         );
 
+    const float declination =
+        0.006918f -
+        0.399912f * std::cos(gamma) +
+        0.070257f * std::sin(gamma) -
+        0.006758f * std::cos(2.0f * gamma) +
+        0.000907f * std::sin(2.0f * gamma) -
+        0.002697f * std::cos(3.0f * gamma) +
+        0.001480f * std::sin(3.0f * gamma);
+
+    const float solarZenith =
+        90.833f * DEG_TO_RAD_F;
+
     float cosineHourAngle =
-        -std::tan(latitudeRad) * std::tan(declination);
+        (
+            std::cos(solarZenith) /
+            (
+                std::cos(latitudeRad) *
+                std::cos(declination)
+            )
+        ) -
+        (
+            std::tan(latitudeRad) *
+            std::tan(declination)
+        );
 
     cosineHourAngle = constrain(
         cosineHourAngle,
@@ -124,29 +163,83 @@ void SeasonManager::calculate(const struct tm& local)
         1.0f
     );
 
-    const float hourAngle = std::acos(cosineHourAngle);
-    dayLengthHours_ = 24.0f * hourAngle / PI_F;
+    const float hourAngle =
+        std::acos(cosineHourAngle);
 
-    // Für die Anzeige wird der lokale Mittag als Mittelpunkt verwendet.
-    // Der Saisonfaktor selbst hängt nur von der Tageslänge ab.
-    const float sunriseHour = 12.0f - dayLengthHours_ / 2.0f;
-    const float sunsetHour = 12.0f + dayLengthHours_ / 2.0f;
+    const float halfDayMinutes =
+        4.0f *
+        hourAngle /
+        DEG_TO_RAD_F;
 
-    sunriseMinutes_ = static_cast<uint16_t>(
-        constrain(
-            static_cast<int>(std::round(sunriseHour * 60.0f)),
-            0,
-            1439
-        )
-    );
+    dayLengthHours_ =
+        (2.0f * halfDayMinutes) /
+        60.0f;
 
-    sunsetMinutes_ = static_cast<uint16_t>(
-        constrain(
-            static_cast<int>(std::round(sunsetHour * 60.0f)),
-            0,
-            1439
-        )
-    );
+    const float solarNoonUtcMinutes =
+        720.0f -
+        4.0f * longitude -
+        equationOfTimeMinutes;
+
+    /*
+     * Aktuellen UTC-Offset aus der bereits von GardenFlow gesetzten
+     * POSIX-Zeitzone bestimmen. Damit wird CET/CEST automatisch
+     * berücksichtigt.
+     */
+    struct tm localNoon = local;
+    localNoon.tm_hour = 12;
+    localNoon.tm_min = 0;
+    localNoon.tm_sec = 0;
+    localNoon.tm_isdst = -1;
+
+    const time_t noonEpoch =
+        mktime(&localNoon);
+
+    struct tm utcNoon = {};
+    gmtime_r(&noonEpoch, &utcNoon);
+    utcNoon.tm_isdst = -1;
+
+    const time_t utcFieldsAsLocal =
+        mktime(&utcNoon);
+
+    const float utcOffsetMinutes =
+        static_cast<float>(
+            difftime(
+                noonEpoch,
+                utcFieldsAsLocal
+            ) / 60.0
+        );
+
+    auto normalizeMinutes =
+        [](float minutes) -> uint16_t
+        {
+            while (minutes < 0.0f)
+            {
+                minutes += 1440.0f;
+            }
+
+            while (minutes >= 1440.0f)
+            {
+                minutes -= 1440.0f;
+            }
+
+            return static_cast<uint16_t>(
+                std::round(minutes)
+            ) % 1440U;
+        };
+
+    sunriseMinutes_ =
+        normalizeMinutes(
+            solarNoonUtcMinutes -
+            halfDayMinutes +
+            utcOffsetMinutes
+        );
+
+    sunsetMinutes_ =
+        normalizeMinutes(
+            solarNoonUtcMinutes +
+            halfDayMinutes +
+            utcOffsetMinutes
+        );
 
     seasonPercent_ = static_cast<uint8_t>(
         constrain(

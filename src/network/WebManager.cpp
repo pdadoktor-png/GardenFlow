@@ -661,31 +661,71 @@ function formatBackupEpoch(epoch){
 }
 function updateSystemHealth(s){
     const warnings=[];
+    const critical=[];
+
+    const freeHeap=Number(s.freeHeap||0);
+    const psramTotal=Number(s.psramTotal||0);
+    const freePsram=Number(s.freePsram||0);
+
     if(!s.wifi)warnings.push('WLAN');
     if(!s.timeValid)warnings.push('NTP');
     if(!s.weatherValid)warnings.push('Wetter');
-    if(Number(s.freeHeap||0)<60000)warnings.push('Speicher');
+
+    // ESP32-S3 mit PSRAM: interner Heap wird getrennt bewertet.
+    if(freeHeap<20000){
+        critical.push('Speicher');
+    }else if(freeHeap<30000){
+        warnings.push('Speicher');
+    }
+
+    // PSRAM ist auf diesem Board vorhanden. Nur wirklich niedrige
+    // Restwerte sollen den Gesamtstatus beeinflussen.
+    if(psramTotal>0){
+        if(freePsram<131072){
+            critical.push('PSRAM');
+        }else if(freePsram<262144){
+            warnings.push('PSRAM');
+        }
+    }
 
     const headline=document.getElementById('healthHeadline');
     const healthBadge=document.getElementById('healthBadge');
 
-    if(warnings.length===0){
-        headline.textContent='GardenFlow betriebsbereit';
-        healthBadge.textContent='OK';
-        healthBadge.className='badge ok';
-    }else{
+    if(critical.length>0){
+        headline.textContent='Kritisch: '+critical.join(', ');
+        healthBadge.textContent='KRITISCH';
+        healthBadge.className='badge off';
+    }else if(warnings.length>0){
         headline.textContent='Prüfen: '+warnings.join(', ');
         healthBadge.textContent='WARNUNG';
         healthBadge.className='badge warn';
+    }else{
+        headline.textContent='GardenFlow betriebsbereit';
+        healthBadge.textContent='OK';
+        healthBadge.className='badge ok';
     }
 
     document.getElementById('healthFirmware').textContent=s.firmwareVersion+' · '+s.buildDate;
     document.getElementById('healthUptime').textContent=formatUptime(s.uptimeSeconds);
-    document.getElementById('healthHeap').textContent=formatBytes(s.freeHeap);
-    document.getElementById('healthPsram').textContent=
-        Number(s.psramTotal||0)>0
-            ? formatBytes(s.freePsram)+' / '+formatBytes(s.psramTotal)
-            : 'nicht vorhanden';
+
+    const heapState=
+        freeHeap<20000?' · kritisch':
+        freeHeap<30000?' · wenig':
+        ' · OK';
+    document.getElementById('healthHeap').textContent=
+        formatBytes(freeHeap)+heapState;
+
+    if(psramTotal>0){
+        const psramState=
+            freePsram<131072?' · kritisch':
+            freePsram<262144?' · wenig':
+            ' · OK';
+        document.getElementById('healthPsram').textContent=
+            formatBytes(freePsram)+' / '+formatBytes(psramTotal)+psramState;
+    }else{
+        document.getElementById('healthPsram').textContent='nicht vorhanden';
+    }
+
     document.getElementById('healthWifi').textContent=
         s.wifi ? `${s.ssid} · ${s.rssi} dBm` : 'getrennt';
     document.getElementById('healthNtp').textContent=s.timeValid?'synchronisiert':'wartet';
