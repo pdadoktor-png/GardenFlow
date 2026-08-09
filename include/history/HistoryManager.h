@@ -47,6 +47,11 @@ public:
     bool isReady() const;
     uint16_t count() const;
 
+    bool readNewest(
+        uint16_t newestIndex,
+        HistoryEntry& entry
+    ) const;
+
     bool recordStart(
         uint32_t programId,
         uint8_t valveIndex,

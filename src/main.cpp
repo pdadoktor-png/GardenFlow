@@ -113,7 +113,8 @@ void setup()
             advisorEngine,
             waterManager,
             seasonManager,
-            backupManager);
+            backupManager,
+            historyManager);
 
         Log.begin(&timeManager);
         Log.info(LogManager::Category::System, "GardenFlow gestartet");

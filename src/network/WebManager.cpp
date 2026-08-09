@@ -17,6 +17,7 @@
 #include "profiles/GardenProfiles.h"
 #include "season/SeasonManager.h"
 #include "backup/BackupManager.h"
+#include "history/HistoryManager.h"
 
 namespace
 {
@@ -48,7 +49,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .dashboardLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#9fb2a5}
 .dashboardValue{font-size:1.35rem;font-weight:800;margin-top:5px}
 .dashboardSub{font-size:.86rem;color:#b5c3ba;margin-top:4px}
-.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.healthGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}.healthItem{border:1px solid #304237;border-radius:11px;padding:11px;background:#111a15aa}.healthLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:#9fb2a5}.healthValue{font-size:1.05rem;font-weight:800;margin-top:4px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
+.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.healthGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}.healthItem{border:1px solid #304237;border-radius:11px;padding:11px;background:#111a15aa}.healthLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:#9fb2a5}.healthValue{font-size:1.05rem;font-weight:800;margin-top:4px}.historyList{margin-top:12px;border:1px solid #304237;border-radius:12px;overflow:hidden}.historyRow{display:grid;grid-template-columns:145px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid #2b3a31}.historyRow:first-child{border-top:0}.historyTitle{font-weight:800}.historyMeta{font-size:.84rem;color:#a8b7ad;margin-top:3px}.historyValue{text-align:right;font-weight:750}.historySkipped{opacity:.72}.historyEmpty{padding:14px;color:#a8b7ad}@media(max-width:620px){.historyRow{grid-template-columns:1fr}.historyValue{text-align:left}}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
 
 .profileGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}.profileCard{border:1px solid #36503f;border-radius:12px;padding:12px;background:#111a15aa}.profileCard h3{margin:0 0 10px}.profileFormula{margin-top:8px;color:#b9c9be;font-size:.84rem}.simGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}.simResult{margin-top:14px;padding:14px;border:1px solid #4b7358;border-radius:12px;background:#102017}.simLine{display:grid;grid-template-columns:1fr auto;gap:10px;padding:6px 0;border-top:1px solid #294032}.simLine:first-child{border-top:0}.simFinal{font-size:1.4rem;font-weight:850;color:#9ce4ae}.rangeRow{display:grid;grid-template-columns:1fr 72px;gap:10px;align-items:center}input[type=range]{width:100%}@media(max-width:620px){.simGrid{grid-template-columns:1fr}}.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
@@ -121,6 +122,11 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
     <div class="healthItem"><div class="healthLabel">OTA</div><div id="healthOta" class="healthValue">--</div></div>
     <div class="healthItem"><div class="healthLabel">Letztes Backup</div><div id="healthBackup" class="healthValue">--</div></div>
   </div>
+</section>
+<section class="card" style="margin-top:12px">
+  <div class="top"><div><div class="muted">Bewässerungshistorie</div><div class="big">Letzte Ereignisse</div></div><span id="historyCount" class="badge">0</span></div>
+  <div class="setupNote">Die letzten Bewässerungsereignisse aus dem persistenten HistoryManager.</div>
+  <div id="historyList" class="historyList"><div class="historyEmpty">Historie wird geladen …</div></div>
 </section>
 <div class="grid">
   <section class="card"><div class="muted">System</div><div class="row"><span>WLAN</span><span id="wifi" class="badge">--</span></div><div class="row"><span>Zeit</span><span id="timeState" class="badge">--</span></div><div class="row"><span>Automatik</span><span id="autoState" class="badge">--</span></div></section>
@@ -1247,6 +1253,63 @@ async function restoreGardenFlowBackup(){
     }
 }
 
+
+function historyEventLabel(entry){
+    if(entry.event==='start')return entry.automatic?'Automatik gestartet':'Manuell gestartet';
+    if(entry.event==='stop')return entry.reason==='user_stop'?'Bewässerung abgebrochen':'Bewässerung beendet';
+    if(entry.event==='skipped'){
+        if(entry.reason==='weather_pause')return 'Wegen Regenpause übersprungen';
+        if(entry.reason==='vacation')return 'Wegen Urlaubsmodus übersprungen';
+        return 'Bewässerung übersprungen';
+    }
+    return entry.event||'Ereignis';
+}
+function historyTimestamp(epoch){
+    const value=Number(epoch||0);
+    if(value<=0)return 'Zeit unbekannt';
+    return new Date(value*1000).toLocaleString('de-DE',{
+        day:'2-digit',month:'2-digit',year:'numeric',
+        hour:'2-digit',minute:'2-digit'
+    });
+}
+function historyDuration(seconds){
+    const total=Math.max(0,Number(seconds||0));
+    const minutes=Math.floor(total/60);
+    const rest=total%60;
+    return rest?`${minutes} min ${rest} s`:`${minutes} min`;
+}
+async function loadHistory(){
+    const list=document.getElementById('historyList');
+    try{
+        const data=await api('/api/history');
+        document.getElementById('historyCount').textContent=`${data.total} / 1000`;
+        if(!data.entries.length){
+            list.innerHTML='<div class="historyEmpty">Noch keine Bewässerungsereignisse gespeichert.</div>';
+            return;
+        }
+        list.innerHTML=data.entries.map(entry=>{
+            const stopped=entry.event==='stop';
+            const skipped=entry.event==='skipped';
+            const plan=entry.event==='start'
+                ?`Geplant ${historyDuration(entry.plannedSeconds)}`
+                :stopped
+                    ?`Ist ${historyDuration(entry.actualSeconds)} · Soll ${historyDuration(entry.plannedSeconds)}`
+                    :`Geplant ${historyDuration(entry.plannedSeconds)}`;
+            const amount=stopped&&Number(entry.liters)>0
+                ?`${Number(entry.liters).toFixed(1)} l · ${Number(entry.costEuro).toFixed(2)} €`
+                :(skipped?'nicht ausgeführt':'');
+            return `<div class="historyRow ${skipped?'historySkipped':''}">
+                <div>${esc(historyTimestamp(entry.timestamp))}</div>
+                <div><div class="historyTitle">${esc(historyEventLabel(entry))}</div>
+                <div class="historyMeta">Programm ${entry.programId} · Ventil ${entry.valve+1} · Profil ${entry.profile} · ${esc(plan)} · Advisor ${entry.advisorPercent>=0?'+':''}${entry.advisorPercent}% · Saison ${entry.seasonPercent}%</div></div>
+                <div class="historyValue">${esc(amount)}</div>
+            </div>`;
+        }).join('');
+    }catch(e){
+        list.innerHTML='<div class="historyEmpty error">Historie konnte nicht geladen werden.</div>';
+    }
+}
+
 async function loadAll(){
     /*
      * Bewusst nacheinander statt parallel:
@@ -1257,7 +1320,8 @@ async function loadAll(){
     await loadPrograms();
     await loadStatus();
     await loadLog();
-}bindSettingsForms();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);
+    await loadHistory();
+}bindSettingsForms();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
 </script>
 </body></html>
 )HTML";
@@ -1273,7 +1337,8 @@ void WebManager::begin(Scheduler& scheduler,
                        AdvisorEngine& advisorEngine,
                        WaterManager& waterManager,
                        SeasonManager& seasonManager,
-                       BackupManager& backupManager)
+                       BackupManager& backupManager,
+                       HistoryManager& historyManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
@@ -1286,6 +1351,7 @@ void WebManager::begin(Scheduler& scheduler,
     waterManager_ = &waterManager;
     seasonManager_ = &seasonManager;
     backupManager_ = &backupManager;
+    historyManager_ = &historyManager;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
@@ -1365,6 +1431,7 @@ void WebManager::configureRoutes()
     server_.on("/api/backup/restore", HTTP_POST, [this]() {
         handleBackupRestore();
     });
+    server_.on("/api/history", HTTP_GET, [this]() { handleHistory(); });
     server_.on("/api/programs", HTTP_GET, [this]() { handlePrograms(); });
     server_.on("/api/program/create", HTTP_POST, [this]() { handleCreateProgram(); });
     server_.on("/api/program/update", HTTP_POST, [this]() { handleUpdateProgram(); });
@@ -2379,6 +2446,103 @@ void WebManager::handleProfilesReset()
     );
 
     sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleHistory()
+{
+    if (historyManager_ == nullptr ||
+        !historyManager_->isReady())
+    {
+        sendJson(
+            503,
+            "{\"error\":\"HistoryManager nicht bereit\"}"
+        );
+        return;
+    }
+
+    constexpr uint16_t MAX_WEB_ENTRIES = 30;
+
+    const uint16_t total =
+        historyManager_->count();
+
+    const uint16_t visible =
+        total < MAX_WEB_ENTRIES
+            ? total
+            : MAX_WEB_ENTRIES;
+
+    String body;
+    body.reserve(
+        256U +
+        static_cast<size_t>(visible) *
+        300U
+    );
+
+    body += F("{\"total\":");
+    body += String(total);
+    body += F(",\"entries\":[");
+
+    bool first = true;
+
+    for (uint16_t i = 0;
+         i < visible;
+         ++i)
+    {
+        HistoryManager::HistoryEntry entry;
+
+        if (!historyManager_->readNewest(
+                i,
+                entry
+            ))
+        {
+            continue;
+        }
+
+        if (!first)
+        {
+            body += ',';
+        }
+        first = false;
+
+        body += F("{\"id\":");
+        body += String(entry.eventId);
+        body += F(",\"timestamp\":");
+        body += String(
+            static_cast<long long>(
+                entry.timestamp
+            )
+        );
+        body += F(",\"programId\":");
+        body += String(entry.programId);
+        body += F(",\"valve\":");
+        body += String(entry.valveIndex);
+        body += F(",\"profile\":");
+        body += String(entry.profileId);
+        body += F(",\"plannedSeconds\":");
+        body += String(entry.plannedSeconds);
+        body += F(",\"actualSeconds\":");
+        body += String(entry.actualSeconds);
+        body += F(",\"liters\":");
+        body += String(entry.liters, 2);
+        body += F(",\"costEuro\":");
+        body += String(entry.costEuro, 3);
+        body += F(",\"advisorPercent\":");
+        body += String(entry.advisorPercent);
+        body += F(",\"seasonPercent\":");
+        body += String(entry.seasonPercent);
+        body += F(",\"automatic\":");
+        body += entry.automatic ? F("true") : F("false");
+        body += F(",\"event\":\"");
+        body += jsonEscape(String(entry.event));
+        body += F("\",\"reason\":\"");
+        body += jsonEscape(String(entry.reason));
+        body += F("\",\"firmware\":\"");
+        body += jsonEscape(String(entry.firmware));
+        body += F("\"}");
+    }
+
+    body += F("]}");
+
+    sendJson(200, body);
 }
 
 void WebManager::handleBackupRestore()

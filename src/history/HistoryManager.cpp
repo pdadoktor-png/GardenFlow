@@ -53,6 +53,57 @@ uint16_t HistoryManager::count() const
     return ready_ ? header_.entryCount : 0;
 }
 
+bool HistoryManager::readNewest(
+    uint16_t newestIndex,
+    HistoryEntry& entry) const
+{
+    if (!ready_ ||
+        newestIndex >= header_.entryCount)
+    {
+        return false;
+    }
+
+    const uint16_t physicalIndex =
+        static_cast<uint16_t>(
+            (
+                header_.writeIndex +
+                MAX_ENTRIES -
+                1U -
+                newestIndex
+            ) %
+            MAX_ENTRIES
+        );
+
+    const size_t position =
+        sizeof(StorageHeader) +
+        static_cast<size_t>(physicalIndex) *
+        sizeof(HistoryEntry);
+
+    File file =
+        LittleFS.open(HISTORY_FILE, "r");
+
+    if (!file)
+    {
+        return false;
+    }
+
+    if (!file.seek(position, SeekSet))
+    {
+        file.close();
+        return false;
+    }
+
+    const size_t bytesRead =
+        file.read(
+            reinterpret_cast<uint8_t*>(&entry),
+            sizeof(entry)
+        );
+
+    file.close();
+
+    return bytesRead == sizeof(entry);
+}
+
 bool HistoryManager::recordStart(
     uint32_t programId,
     uint8_t valveIndex,
