@@ -8,6 +8,7 @@ class TimeManager;
 class WeatherManager;
 class SmartControlManager;
 class WaterManager;
+class HistoryManager;
 
 class RuntimeManager
 {
@@ -31,6 +32,10 @@ public:
 
     void setWaterManager(
         WaterManager& waterManager
+    );
+
+    void setHistoryManager(
+        HistoryManager& historyManager
     );
 
     bool startProgram(
@@ -61,6 +66,7 @@ private:
     SmartControlManager*
         smartControlManager_ = nullptr;
     WaterManager* waterManager_ = nullptr;
+    HistoryManager* historyManager_ = nullptr;
 
     int16_t runningProgramIndex_ = -1;
     uint32_t startedAtMs_ = 0;
@@ -76,10 +82,15 @@ private:
     int32_t lastStartedDayKey_ = -1;
     int16_t lastStartedMinute_ = -1;
 
+    uint32_t lastSkippedProgramId_ = 0;
+    int32_t lastSkippedDayKey_ = -1;
+    int16_t lastSkippedMinute_ = -1;
+
     void clearState();
     bool allValvesIdleAndClosed() const;
     void checkAutomaticStart();
 
     uint32_t elapsedSeconds() const;
     void recordWaterUsage();
+    void recordSkippedDuePrograms(const char* reason);
 };

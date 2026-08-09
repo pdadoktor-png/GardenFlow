@@ -7,6 +7,7 @@
 #include "smart/SmartControlManager.h"
 #include "water/WaterManager.h"
 #include "log/LogManager.h"
+#include "history/HistoryManager.h"
 
 void RuntimeManager::begin(
     Scheduler& scheduler,
@@ -44,6 +45,12 @@ void RuntimeManager::setWaterManager(
     waterManager_ = &waterManager;
 }
 
+void RuntimeManager::setHistoryManager(
+    HistoryManager& historyManager)
+{
+    historyManager_ = &historyManager;
+}
+
 void RuntimeManager::update()
 {
     checkAutomaticStart();
@@ -66,6 +73,34 @@ void RuntimeManager::update()
             valveIndex_
         ))
     {
+        const uint32_t actualSeconds =
+            min(
+                elapsedSeconds(),
+                durationSeconds_
+            );
+
+        if (historyManager_ != nullptr &&
+            scheduler_ != nullptr &&
+            runningProgramIndex_ >= 0)
+        {
+            const auto& program =
+                scheduler_->program(
+                    static_cast<uint8_t>(
+                        runningProgramIndex_
+                    )
+                );
+
+            historyManager_->recordStop(
+                program.id,
+                program.valveIndex,
+                program.profileId,
+                durationSeconds_,
+                actualSeconds,
+                automaticRun_,
+                false
+            );
+        }
+
         recordWaterUsage();
 
         Log.addf(
@@ -93,6 +128,9 @@ void RuntimeManager::checkAutomaticStart()
         weatherManager_->
             automaticPauseActive())
     {
+        recordSkippedDuePrograms(
+            "weather_pause"
+        );
         return;
     }
 
@@ -109,6 +147,9 @@ void RuntimeManager::checkAutomaticStart()
         !smartControlManager_->
             automaticRunAllowed(local))
     {
+        recordSkippedDuePrograms(
+            "vacation"
+        );
         return;
     }
 
@@ -260,6 +301,17 @@ bool RuntimeManager::startProgram(
         program.valveIndex;
     automaticRun_ = automatic;
 
+    if (historyManager_ != nullptr)
+    {
+        historyManager_->recordStart(
+            program.id,
+            program.valveIndex,
+            program.profileId,
+            durationSeconds_,
+            automatic
+        );
+    }
+
     Log.addf(
         LogManager::Category::Program,
         LogManager::Level::Info,
@@ -291,6 +343,34 @@ bool RuntimeManager::stop()
         ))
     {
         return false;
+    }
+
+    const uint32_t actualSeconds =
+        min(
+            elapsedSeconds(),
+            durationSeconds_
+        );
+
+    if (historyManager_ != nullptr &&
+        scheduler_ != nullptr &&
+        runningProgramIndex_ >= 0)
+    {
+        const auto& program =
+            scheduler_->program(
+                static_cast<uint8_t>(
+                    runningProgramIndex_
+                )
+            );
+
+        historyManager_->recordStop(
+            program.id,
+            program.valveIndex,
+            program.profileId,
+            durationSeconds_,
+            actualSeconds,
+            automaticRun_,
+            true
+        );
     }
 
     recordWaterUsage();
@@ -500,6 +580,86 @@ RuntimeManager::elapsedSeconds() const
             millis() - startedAtMs_
         ) /
         1000UL;
+}
+
+void RuntimeManager::recordSkippedDuePrograms(
+    const char* reason)
+{
+    if (historyManager_ == nullptr ||
+        scheduler_ == nullptr ||
+        timeManager_ == nullptr ||
+        !timeManager_->isValid())
+    {
+        return;
+    }
+
+    struct tm local = {};
+
+    if (!timeManager_->getLocalTime(local))
+    {
+        return;
+    }
+
+    const int32_t dayKey =
+        (local.tm_year + 1900) *
+        1000 +
+        local.tm_yday;
+
+    const int16_t minute =
+        local.tm_hour * 60 +
+        local.tm_min;
+
+    const uint8_t weekday =
+        timeManager_->weekdayMondayZero();
+
+    for (uint8_t i = 0;
+         i < Scheduler::MAX_PROGRAMS;
+         ++i)
+    {
+        if (!scheduler_->isProgramUsed(i))
+        {
+            continue;
+        }
+
+        const auto& program =
+            scheduler_->program(i);
+
+        if (!program.enabled ||
+            !(program.weekdays &
+              (1U << weekday)) ||
+            program.startHour != local.tm_hour ||
+            program.startMinute != local.tm_min)
+        {
+            continue;
+        }
+
+        if (lastSkippedProgramId_ ==
+                program.id &&
+            lastSkippedDayKey_ ==
+                dayKey &&
+            lastSkippedMinute_ ==
+                minute)
+        {
+            return;
+        }
+
+        historyManager_->recordSkipped(
+            program.id,
+            program.valveIndex,
+            program.profileId,
+            program.durationSeconds,
+            reason
+        );
+
+        lastSkippedProgramId_ =
+            program.id;
+        lastSkippedDayKey_ =
+            dayKey;
+        lastSkippedMinute_ =
+            minute;
+
+        return;
+    }
 }
 
 void RuntimeManager::recordWaterUsage()

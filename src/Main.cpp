@@ -19,6 +19,7 @@
 #include "water/WaterManager.h"
 #include "season/SeasonManager.h"
 #include "backup/BackupManager.h"
+#include "history/HistoryManager.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -35,6 +36,7 @@ static AdvisorEngine advisorEngine;
 static WaterManager waterManager;
 static SeasonManager seasonManager;
 static BackupManager backupManager;
+static HistoryManager historyManager;
 
 void setup()
 {
@@ -81,9 +83,17 @@ void setup()
             smartControlManager
         );
 
+        historyManager.begin(
+            timeManager,
+            waterManager,
+            smartControlManager,
+            advisorEngine
+        );
+
         runtimeManager.setWeatherManager(weatherManager);
         runtimeManager.setSmartControlManager(smartControlManager);
         runtimeManager.setWaterManager(waterManager);
+        runtimeManager.setHistoryManager(historyManager);
 
         displayManager.begin(
             valveManager,
