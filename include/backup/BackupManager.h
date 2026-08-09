@@ -21,6 +21,8 @@ public:
         AdvisorEngine& advisorEngine);
 
     String createBackupJson() const;
+    bool restoreBackupJson(const String& json, String& message);
+    time_t lastBackupEpoch() const;
 
 private:
     SettingsManager* settingsManager_ = nullptr;
@@ -29,6 +31,7 @@ private:
     WaterManager* waterManager_ = nullptr;
     SeasonManager* seasonManager_ = nullptr;
     AdvisorEngine* advisorEngine_ = nullptr;
+    mutable time_t lastBackupEpoch_ = 0;
 
     static String jsonEscape(const String& value);
     bool ready() const;

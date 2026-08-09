@@ -48,7 +48,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .dashboardLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#9fb2a5}
 .dashboardValue{font-size:1.35rem;font-weight:800;margin-top:5px}
 .dashboardSub{font-size:.86rem;color:#b5c3ba;margin-top:4px}
-.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
+.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.healthGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}.healthItem{border:1px solid #304237;border-radius:11px;padding:11px;background:#111a15aa}.healthLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:#9fb2a5}.healthValue{font-size:1.05rem;font-weight:800;margin-top:4px}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
 
 .profileGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}.profileCard{border:1px solid #36503f;border-radius:12px;padding:12px;background:#111a15aa}.profileCard h3{margin:0 0 10px}.profileFormula{margin-top:8px;color:#b9c9be;font-size:.84rem}.simGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}.simResult{margin-top:14px;padding:14px;border:1px solid #4b7358;border-radius:12px;background:#102017}.simLine{display:grid;grid-template-columns:1fr auto;gap:10px;padding:6px 0;border-top:1px solid #294032}.simLine:first-child{border-top:0}.simFinal{font-size:1.4rem;font-weight:850;color:#9ce4ae}.rangeRow{display:grid;grid-template-columns:1fr 72px;gap:10px;align-items:center}input[type=range]{width:100%}@media(max-width:620px){.simGrid{grid-template-columns:1fr}}.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
@@ -103,6 +103,23 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   </div>
   <div class="dashboardSub" style="margin-top:12px">
     Letztes Ereignis: <span id="dashLastEvent">--</span>
+  </div>
+</section>
+<section class="card" style="margin-top:12px">
+  <div class="top">
+    <div><div class="muted">Systemstatus</div><div id="healthHeadline" class="big">System wird geprüft …</div></div>
+    <span id="healthBadge" class="badge">--</span>
+  </div>
+  <div class="healthGrid">
+    <div class="healthItem"><div class="healthLabel">Firmware</div><div id="healthFirmware" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">Laufzeit</div><div id="healthUptime" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">Freier Heap</div><div id="healthHeap" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">PSRAM frei</div><div id="healthPsram" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">WLAN</div><div id="healthWifi" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">NTP</div><div id="healthNtp" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">Wetter</div><div id="healthWeather" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">OTA</div><div id="healthOta" class="healthValue">--</div></div>
+    <div class="healthItem"><div class="healthLabel">Letztes Backup</div><div id="healthBackup" class="healthValue">--</div></div>
   </div>
 </section>
 <div class="grid">
@@ -189,6 +206,17 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <div class="field"><span>&nbsp;</span><div><button onclick="saveWaterSettings()">Speichern</button> <button class="stop" onclick="resetWaterStatistics()">Zähler löschen</button></div></div>
 </div>
 <div id="waterSaveState" class="saveState"></div>
+</section>
+<section class="card" style="margin-top:12px">
+<div class="top"><div><div class="muted">Datensicherung</div><div class="big">GardenFlow Backup</div></div><span class="badge ok">JSON</span></div>
+<div class="setupNote">Sichert Programme, Gartenprofile, Wasserparameter, Einstellungen und Statistik. Passwörter und API-Schlüssel sind in dieser Version nicht enthalten.</div>
+<div style="margin-top:12px"><button onclick="downloadGardenFlowBackup()">Backup herunterladen</button></div>
+<div class="setupNote" style="margin-top:14px"><b>Wiederherstellen:</b> Programme, Profile, Standort, Wetter- und Wasserparameter werden aus einer Backup-Datei übernommen. WLAN-Passwort, API-Key und Verbrauchsstatistik bleiben unverändert.</div>
+<div class="formgrid" style="margin-top:10px">
+<label class="field full"><span>Backup-Datei</span><input id="backupRestoreFile" type="file" accept=".json,application/json"></label>
+</div>
+<div style="margin-top:10px"><button class="stop" onclick="restoreGardenFlowBackup()">Backup wiederherstellen</button></div>
+<div id="backupState" class="saveState"></div>
 </section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Setup</div><div class="big">WLAN und Standort</div></div><span id="setupState" class="badge">--</span></div><div class="setupGrid"><label class="field"><span>WLAN-Name (SSID)</span><input id="setupSsid" maxlength="32" autocomplete="off"></label><label class="field"><span>WLAN-Passwort</span><input id="setupPassword" type="password" placeholder="leer = unverändert" autocomplete="new-password"></label><label class="field"><span>Breitengrad</span><input id="setupLatitude" type="number" min="-90" max="90" step="0.00001"></label><label class="field"><span>Längengrad</span><input id="setupLongitude" type="number" min="-180" max="180" step="0.00001"></label><label class="field full"><span>Zeitzone (POSIX)</span><input id="setupTimezone" value="CET-1CEST,M3.5.0/2,M10.5.0/3"></label></div><div class="setupNote">Deutschland: Der voreingestellte Zeitzonenwert berücksichtigt Sommer- und Winterzeit automatisch. Nach dem Speichern startet GardenFlow neu.</div><div style="margin-top:12px"><button onclick="saveSetup()">WLAN und Standort speichern</button> <button class="secondary" onclick="startSetupPortal()">Setup-Portal starten</button></div><div id="setupSaveState" class="saveState"></div></section>
 <section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Diagnose</div><div class="big">Ereignisprotokoll</div></div><span id="logCount" class="badge">0</span></div><div class="logTools"><select id="logFilter" onchange="renderLog()"><option value="">Alle Kategorien</option><option>System</option><option>WLAN</option><option>Zeit</option><option>Wetter</option><option>Programm</option><option>Ventil</option><option>Scheduler</option><option>Fehler</option></select><input id="logSearch" placeholder="Suchen" oninput="renderLog()"><button class="secondary" onclick="loadLog()">Aktualisieren</button><button class="stop" onclick="clearLog()">Löschen</button></div><div id="logList" class="logList"><div class="muted" style="padding:10px">Protokoll wird geladen …</div></div></section>
@@ -609,6 +637,64 @@ function updateAdvisor(s){
  factors.innerHTML=(s.advisorFactors||[]).map(f=>{const c=Number(f.contribution||0),cls=c>0?'ok':(c<0?'warn':'off');return `<div class="advisorFactor"><span>${esc(f.name)}</span><span>${esc(f.value)}</span><span class="badge ${cls}">${signedPercent(c)}</span></div>`;}).join('')||'<div class="dashboardSub" style="padding:10px">Noch keine Einzelfaktoren verfügbar</div>';
  reasons.innerHTML=(s.advisorReasons||[]).map(reason=>`<div>✓ ${esc(reason)}</div>`).join('');duration.textContent=advisorNextDuration(s);const cv=Number(s.advisorConfidence||0);confidence.textContent=`Vertrauen: ${cv} % · ${confidenceText(cv)}`;confidenceFill.style.width=Math.max(0,Math.min(100,cv))+'%';
 }
+function formatUptime(seconds){
+    seconds=Math.max(0,Number(seconds||0));
+    const days=Math.floor(seconds/86400);
+    const hours=Math.floor((seconds%86400)/3600);
+    const minutes=Math.floor((seconds%3600)/60);
+    if(days>0)return `${days} T ${hours} h ${minutes} min`;
+    if(hours>0)return `${hours} h ${minutes} min`;
+    return `${minutes} min`;
+}
+function formatBytes(value){
+    const bytes=Number(value||0);
+    if(bytes>=1048576)return (bytes/1048576).toFixed(1)+' MB';
+    return Math.round(bytes/1024)+' kB';
+}
+function formatBackupEpoch(epoch){
+    const value=Number(epoch||0);
+    if(value<=0)return 'noch keines seit Start';
+    return new Date(value*1000).toLocaleString('de-DE',{
+        day:'2-digit',month:'2-digit',year:'numeric',
+        hour:'2-digit',minute:'2-digit'
+    });
+}
+function updateSystemHealth(s){
+    const warnings=[];
+    if(!s.wifi)warnings.push('WLAN');
+    if(!s.timeValid)warnings.push('NTP');
+    if(!s.weatherValid)warnings.push('Wetter');
+    if(Number(s.freeHeap||0)<60000)warnings.push('Speicher');
+
+    const headline=document.getElementById('healthHeadline');
+    const healthBadge=document.getElementById('healthBadge');
+
+    if(warnings.length===0){
+        headline.textContent='GardenFlow betriebsbereit';
+        healthBadge.textContent='OK';
+        healthBadge.className='badge ok';
+    }else{
+        headline.textContent='Prüfen: '+warnings.join(', ');
+        healthBadge.textContent='WARNUNG';
+        healthBadge.className='badge warn';
+    }
+
+    document.getElementById('healthFirmware').textContent=s.firmwareVersion+' · '+s.buildDate;
+    document.getElementById('healthUptime').textContent=formatUptime(s.uptimeSeconds);
+    document.getElementById('healthHeap').textContent=formatBytes(s.freeHeap);
+    document.getElementById('healthPsram').textContent=
+        Number(s.psramTotal||0)>0
+            ? formatBytes(s.freePsram)+' / '+formatBytes(s.psramTotal)
+            : 'nicht vorhanden';
+    document.getElementById('healthWifi').textContent=
+        s.wifi ? `${s.ssid} · ${s.rssi} dBm` : 'getrennt';
+    document.getElementById('healthNtp').textContent=s.timeValid?'synchronisiert':'wartet';
+    document.getElementById('healthWeather').textContent=
+        s.weatherValid?`${Number(s.temperature||0).toFixed(1)} °C · ${s.humidity} %`:'nicht verfügbar';
+    document.getElementById('healthOta').textContent=s.otaReady?'bereit':'nicht bereit';
+    document.getElementById('healthBackup').textContent=formatBackupEpoch(s.lastBackupEpoch);
+}
+
 function updateDashboard(s){
     const state=document.getElementById('dashState');
     const stateBadge=document.getElementById('dashStateBadge');
@@ -726,7 +812,7 @@ async function resetWaterStatistics(){
     }
 }
 
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -1036,6 +1122,91 @@ async function saveSetup(){
         setSaveState('setupSaveState','Fehler: '+e.message,'errmsg');
     }
 }
+async function downloadGardenFlowBackup(){
+    const state=document.getElementById('backupState');
+    try{
+        if(state){state.textContent='Backup wird erstellt …';state.className='saveState';}
+        const response=await fetch('/api/backup',{cache:'no-store'});
+        if(!response.ok)throw new Error(await response.text()||('HTTP '+response.status));
+        const backup=await response.json();
+        const now=new Date();
+        const pad=value=>String(value).padStart(2,'0');
+        const filename=`gardenflow_backup_${now.getFullYear()}-${pad(now.getMonth()+1)}-${pad(now.getDate())}_${pad(now.getHours())}${pad(now.getMinutes())}${pad(now.getSeconds())}.json`;
+        const blob=new Blob([JSON.stringify(backup,null,2)],{type:'application/json'});
+        const url=URL.createObjectURL(blob);
+        const link=document.createElement('a');
+        link.href=url;
+        link.download=filename;
+        document.body.appendChild(link);
+        link.click();
+        link.remove();
+        URL.revokeObjectURL(url);
+        if(state){state.textContent='Backup heruntergeladen: '+filename;state.className='saveState okmsg';}
+    }catch(e){
+        if(state){state.textContent='Backup fehlgeschlagen: '+e.message;state.className='saveState errmsg';}
+    }
+}
+
+
+async function restoreGardenFlowBackup(){
+    const state=document.getElementById('backupState');
+    const input=document.getElementById('backupRestoreFile');
+    const file=input&&input.files?input.files[0]:null;
+
+    if(!file){
+        if(state){
+            state.textContent='Bitte zuerst eine Backup-Datei auswählen.';
+            state.className='saveState errmsg';
+        }
+        return;
+    }
+
+    if(!confirm(
+        'Backup wirklich wiederherstellen?\\n\\n'+
+        'Programme, Profile und Einstellungen werden überschrieben. '+
+        'WLAN-Passwort, API-Key und Verbrauchsstatistik bleiben erhalten.'
+    )){
+        return;
+    }
+
+    try{
+        if(state){
+            state.textContent='Backup wird geprüft und wiederhergestellt …';
+            state.className='saveState';
+        }
+
+        const text=await file.text();
+        JSON.parse(text);
+
+        const response=await fetch('/api/backup/restore',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:text
+        });
+
+        const result=await response.json();
+
+        if(!response.ok){
+            throw new Error(result.error||('HTTP '+response.status));
+        }
+
+        if(state){
+            state.textContent=
+                'Wiederherstellung erfolgreich: '+
+                (result.message||'OK')+
+                '. GardenFlow startet neu …';
+            state.className='saveState okmsg';
+        }
+
+        setTimeout(()=>location.reload(),3500);
+    }catch(e){
+        if(state){
+            state.textContent='Restore fehlgeschlagen: '+e.message;
+            state.className='saveState errmsg';
+        }
+    }
+}
+
 async function loadAll(){
     /*
      * Bewusst nacheinander statt parallel:
@@ -1151,6 +1322,9 @@ void WebManager::configureRoutes()
         }
         sendJson(200, backupManager_->createBackupJson());
     });
+    server_.on("/api/backup/restore", HTTP_POST, [this]() {
+        handleBackupRestore();
+    });
     server_.on("/api/programs", HTTP_GET, [this]() { handlePrograms(); });
     server_.on("/api/program/create", HTTP_POST, [this]() { handleCreateProgram(); });
     server_.on("/api/program/update", HTTP_POST, [this]() { handleUpdateProgram(); });
@@ -1218,7 +1392,7 @@ void WebManager::handleStatus()
     timeManager_->formatDate(dateText, sizeof(dateText));
 
     String body;
-    body.reserve(3800);
+    body.reserve(4300);
     body += F("{\"wifi\":");
     body += timeManager_->isWifiConnected() ? F("true") : F("false");
     body += F(",\"timeValid\":");
@@ -1233,7 +1407,28 @@ void WebManager::handleStatus()
     body += timeText;
     body += F("\",\"date\":\"");
     body += dateText;
-    body += F("\",\"running\":");
+    body += F("\",\"firmwareVersion\":\"0.39.2");
+    body += F("\",\"buildDate\":\"");
+    body += __DATE__;
+    body += ' ';
+    body += __TIME__;
+    body += F("\",\"uptimeSeconds\":");
+    body += String(millis() / 1000UL);
+    body += F(",\"freeHeap\":");
+    body += String(ESP.getFreeHeap());
+    body += F(",\"psramTotal\":");
+    body += String(ESP.getPsramSize());
+    body += F(",\"freePsram\":");
+    body += String(ESP.getFreePsram());
+    body += F(",\"otaReady\":");
+    body += otaStarted_ ? F("true") : F("false");
+    body += F(",\"lastBackupEpoch\":");
+    body += String(
+        backupManager_ != nullptr
+            ? static_cast<unsigned long>(backupManager_->lastBackupEpoch())
+            : 0UL
+    );
+    body += F(",\"running\":");
     body += runtimeManager_->isRunning() ? F("true") : F("false");
     body += F(",\"programId\":");
     if (runtimeManager_->isRunning())
@@ -2144,6 +2339,75 @@ void WebManager::handleProfilesReset()
     );
 
     sendJson(200, "{\"ok\":true}");
+}
+
+void WebManager::handleBackupRestore()
+{
+    if (backupManager_ == nullptr)
+    {
+        sendJson(
+            503,
+            "{\"error\":\"BackupManager nicht bereit\"}"
+        );
+        return;
+    }
+
+    if (!server_.hasArg("plain"))
+    {
+        sendJson(
+            400,
+            "{\"error\":\"Keine JSON-Daten empfangen\"}"
+        );
+        return;
+    }
+
+    const String body =
+        server_.arg("plain");
+
+    if (body.length() == 0 ||
+        body.length() > 30000)
+    {
+        sendJson(
+            400,
+            "{\"error\":\"Backup-Datei leer oder zu groß\"}"
+        );
+        return;
+    }
+
+    String message;
+
+    if (!backupManager_->
+            restoreBackupJson(
+                body,
+                message
+            ))
+    {
+        sendJson(
+            400,
+            String("{\"error\":\"") +
+            jsonEscape(message) +
+            "\"}"
+        );
+        return;
+    }
+
+    const String logMessage =
+        String("Backup wiederhergestellt: ") +
+        message;
+
+    Log.info(
+        LogManager::Category::System,
+        logMessage.c_str()
+    );
+
+    sendJson(
+        200,
+        String("{\"ok\":true,\"message\":\"") +
+        jsonEscape(message) +
+        "\"}"
+    );
+
+    restartRequestedAtMs_ = millis();
 }
 
 void WebManager::handleNotFound()

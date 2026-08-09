@@ -78,6 +78,7 @@ private:
     void handleProfiles();
     void handleProfileSave();
     void handleProfilesReset();
+    void handleBackupRestore();
     void handleNotFound();
 
     void sendJson(int code, const String& body);
