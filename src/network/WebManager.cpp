@@ -27,10 +27,10 @@ const char INDEX_HTML[] PROGMEM = R"HTML(
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
-<title>GardenFlow by HK 2026 V1.0</title>
+<title>GardenFlow v0.40.0</title>
 <style>
 :root{font-family:system-ui,-apple-system,sans-serif;color-scheme:dark;background:#101714;color:#edf5ef}
-body{margin:0;max-width:960px;padding:18px;margin:auto}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
+body{margin:0;max-width:1180px;padding:18px 18px 30px 238px}.top{display:flex;justify-content:space-between;gap:12px;align-items:center;flex-wrap:wrap}
 h1{margin:0;font-size:1.7rem}.muted{color:#a8b7ad}.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px;margin-top:16px}
 .card{background:#18231d;border:1px solid #2b3a31;border-radius:14px;padding:15px;box-shadow:0 6px 18px #0004}.big{font-size:1.55rem;font-weight:700}
 button{border:0;border-radius:10px;padding:10px 14px;font-weight:700;cursor:pointer;background:#7fda98;color:#102016}button.stop{background:#ff8b84;color:#2c1110}
@@ -49,7 +49,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .dashboardLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.08em;color:#9fb2a5}
 .dashboardValue{font-size:1.35rem;font-weight:800;margin-top:5px}
 .dashboardSub{font-size:.86rem;color:#b5c3ba;margin-top:4px}
-.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.healthGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}.healthItem{border:1px solid #304237;border-radius:11px;padding:11px;background:#111a15aa}.healthLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:#9fb2a5}.healthValue{font-size:1.05rem;font-weight:800;margin-top:4px}.historyList{margin-top:12px;border:1px solid #304237;border-radius:12px;overflow:hidden}.historyRow{display:grid;grid-template-columns:145px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid #2b3a31}.historyRow:first-child{border-top:0}.historyTitle{font-weight:800}.historyMeta{font-size:.84rem;color:#a8b7ad;margin-top:3px}.historyValue{text-align:right;font-weight:750}.historySkipped{opacity:.72}.historyEmpty{padding:14px;color:#a8b7ad}@media(max-width:620px){.historyRow{grid-template-columns:1fr}.historyValue{text-align:left}}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
+.dashboardValve{display:flex;justify-content:space-between;gap:8px;margin-top:7px}.healthGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(190px,1fr));gap:10px;margin-top:12px}.healthItem{border:1px solid #304237;border-radius:11px;padding:11px;background:#111a15aa}.healthLabel{font-size:.78rem;text-transform:uppercase;letter-spacing:.06em;color:#9fb2a5}.healthValue{font-size:1.05rem;font-weight:800;margin-top:4px}.historyList{margin-top:12px;border:1px solid #304237;border-radius:12px;overflow:hidden}.historyRow{display:grid;grid-template-columns:145px 1fr auto;gap:10px;align-items:center;padding:10px 12px;border-top:1px solid #2b3a31}.historyRow:first-child{border-top:0}.historyTitle{font-weight:800}.historyMeta{font-size:.84rem;color:#a8b7ad;margin-top:3px}.historyValue{text-align:right;font-weight:750}.historySkipped{opacity:.72}.historyEmpty{padding:14px;color:#a8b7ad}.historyTools{display:flex;gap:8px;flex-wrap:wrap;align-items:end;margin-top:12px}.historyTools .field{min-width:150px;flex:1}.historyTools button{white-space:nowrap}@media(max-width:620px){.historyRow{grid-template-columns:1fr}.historyValue{text-align:left}}.advisorCard{grid-column:1/-1;border-color:#6b8f72;background:linear-gradient(135deg,#1e3928,#14251b)}.advisorHeadline{font-size:1.4rem;font-weight:850;margin-top:5px}.advisorReasons{margin-top:9px;display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:6px;color:#c1d1c5}.advisorNarrative{margin-top:12px;padding:11px;border-radius:10px;background:#102017;color:#d8e5da}.advisorFactors{margin-top:12px;border:1px solid #355140;border-radius:10px;overflow:hidden}.advisorFactor{display:grid;grid-template-columns:1.2fr 1fr auto;gap:10px;padding:9px 11px;border-top:1px solid #2b4033}.advisorFactor:first-child{border-top:0}.advisorConfidence{margin-top:12px;display:flex;align-items:center;gap:10px}.confidenceBar{height:9px;flex:1;background:#293a30;border-radius:99px;overflow:hidden}.confidenceFill{height:100%;background:#7fda98}.advisorDuration{margin-top:12px;font-size:1.05rem;font-weight:750}.waterGrid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:10px}.waterValue{font-size:1.2rem;font-weight:800}@media(max-width:620px){.waterGrid{grid-template-columns:repeat(2,1fr)}}
 @media(max-width:760px){.dashboardGrid{grid-template-columns:1fr}}
 
 .profileGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;margin-top:12px}.profileCard{border:1px solid #36503f;border-radius:12px;padding:12px;background:#111a15aa}.profileCard h3{margin:0 0 10px}.profileFormula{margin-top:8px;color:#b9c9be;font-size:.84rem}.simGrid{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-top:12px}.simResult{margin-top:14px;padding:14px;border:1px solid #4b7358;border-radius:12px;background:#102017}.simLine{display:grid;grid-template-columns:1fr auto;gap:10px;padding:6px 0;border-top:1px solid #294032}.simLine:first-child{border-top:0}.simFinal{font-size:1.4rem;font-weight:850;color:#9ce4ae}.rangeRow{display:grid;grid-template-columns:1fr 72px;gap:10px;align-items:center}input[type=range]{width:100%}@media(max-width:620px){.simGrid{grid-template-columns:1fr}}.setupNote{margin-top:8px;color:#a8b7ad;font-size:.86rem}
@@ -58,11 +58,52 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 
 
 .modal{display:none;position:fixed;inset:0;background:#000a;align-items:center;justify-content:center;padding:16px;z-index:20}.modal.open{display:flex}.dialog{width:min(520px,100%);max-height:92vh;overflow:auto;background:#18231d;border:1px solid #3b5143;border-radius:16px;padding:18px}.formgrid{display:grid;grid-template-columns:1fr 1fr;gap:12px}.field{display:flex;flex-direction:column;gap:6px}.field.full{grid-column:1/-1}input,select{border:1px solid #46594c;border-radius:9px;background:#101714;color:#edf5ef;padding:10px;font-size:1rem}.weekdays{display:grid;grid-template-columns:repeat(7,1fr);gap:6px}.day{padding:9px 4px;background:#33463a;color:#edf5ef}.day.active{background:#7fda98;color:#102016}.actions{display:flex;justify-content:flex-end;gap:8px;margin-top:16px}.saveState{min-height:1.4em;margin-top:10px;color:#a8b7ad}.saveState.okmsg{color:#7fda98}.saveState.errmsg{color:#ff9e98}.dirtyMark{color:#ffd27a;font-weight:700}.logTools{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}.logList{margin-top:10px;max-height:420px;overflow:auto;border:1px solid #304237;border-radius:10px}.logRow{display:grid;grid-template-columns:150px 90px 1fr;gap:8px;padding:8px 10px;border-top:1px solid #2b3a31;font-size:.88rem}.logRow:first-child{border-top:0}.logRow.warning{background:#5a451f55}.logRow.error{background:#66312d66}.logCategory{color:#9fb2a5}.logMessage{word-break:break-word}@media(max-width:620px){.logRow{grid-template-columns:1fr}.logCategory{font-size:.78rem}}@media(max-width:540px){.formgrid{grid-template-columns:1fr}.field.full{grid-column:auto}.weekdays{grid-template-columns:repeat(4,1fr)}}
+
+.mainMenu{position:fixed;left:0;top:0;bottom:0;width:205px;padding:18px 12px;background:#0c120f;border-right:1px solid #2b3a31;z-index:40;overflow:auto}
+.menuBrand{padding:6px 10px 18px}.menuBrandTitle{font-size:1.25rem;font-weight:850}.menuBrandSub{font-size:.8rem;color:#8fa197;margin-top:3px}
+.menuButton{display:flex;width:100%;align-items:center;gap:10px;border:0;background:transparent;color:#c8d5cc;text-align:left;padding:11px 12px;margin:3px 0;border-radius:10px;font-weight:750}
+.menuButton:hover{background:#1a2921}.menuButton.active{background:#285c38;color:#fff}.menuIcon{width:22px;text-align:center;font-size:1.05rem}
+.menuDivider{height:1px;background:#27352d;margin:12px 8px}.menuStatus{padding:9px 11px;color:#9fb2a5;font-size:.8rem}
+.mobileMenuButton{display:none;position:fixed;left:12px;top:12px;z-index:60;padding:9px 12px;background:#285c38;color:#fff;border-radius:10px;box-shadow:0 4px 15px #0007}
+.menuOverlay{display:none;position:fixed;inset:0;background:#0009;z-index:35}
+.pageSection{display:none}.pageSection.pageActive{display:block}
+.pageGrid{display:none}.pageGrid.pageActive{display:grid}
+.pageHeader{display:none;margin:2px 0 14px}.pageHeader.pageActive{display:block}.pageTitle{font-size:1.65rem;font-weight:850}.pageSubtitle{color:#9fb2a5;margin-top:3px}
+@media(max-width:820px){
+ body{max-width:none;padding:64px 14px 26px;margin:0}
+ .mainMenu{transform:translateX(-110%);transition:transform .2s ease;width:230px;box-shadow:8px 0 25px #0008}
+ .mainMenu.open{transform:translateX(0)}
+ .mobileMenuButton{display:block}
+ .menuOverlay.open{display:block}
+}
+
 </style>
 </head>
 <body>
-<div class="top"><div><h1>GardenFlow by HK 2026 V1.0</h1><div class="muted" id="address">wird verbunden …</div></div><div id="clock" class="big">--:--</div></div>
-<section class="card dashboardHero">
+<button id="mobileMenuButton" class="mobileMenuButton" onclick="toggleMainMenu()">☰ Menü</button>
+<div id="menuOverlay" class="menuOverlay" onclick="closeMainMenu()"></div>
+<nav id="mainMenu" class="mainMenu">
+  <div class="menuBrand">
+    <div class="menuBrandTitle">GardenFlow</div>
+    <div class="menuBrandSub">v0.40.0 · HK 2026</div>
+  </div>
+  <button class="menuButton active" data-page-target="dashboard" onclick="showPage('dashboard')"><span class="menuIcon">⌂</span>Dashboard</button>
+  <button class="menuButton" data-page-target="programs" onclick="showPage('programs')"><span class="menuIcon">▤</span>Programme</button>
+  <button class="menuButton" data-page-target="smart" onclick="showPage('smart')"><span class="menuIcon">✦</span>Smart Control</button>
+  <button class="menuButton" data-page-target="water" onclick="showPage('water')"><span class="menuIcon">◉</span>Wasser</button>
+  <button class="menuButton" data-page-target="history" onclick="showPage('history')"><span class="menuIcon">↺</span>Historie</button>
+  <button class="menuButton" data-page-target="system" onclick="showPage('system')"><span class="menuIcon">⚙</span>System</button>
+  <div class="menuDivider"></div>
+  <div id="menuConnectionState" class="menuStatus">System wird geladen …</div>
+</nav>
+<div class="pageHeader pageActive" data-page-header="dashboard"><div class="pageTitle">Dashboard</div><div class="pageSubtitle">Aktueller Zustand und nächste Bewässerung</div></div>
+<div class="pageHeader" data-page-header="programs"><div class="pageTitle">Programme</div><div class="pageSubtitle">Bewässerungsplan und manuelle Steuerung</div></div>
+<div class="pageHeader" data-page-header="smart"><div class="pageTitle">Smart Control</div><div class="pageSubtitle">Wetter, Saison, Urlaub, Advisor und Pflanzenprofile</div></div>
+<div class="pageHeader" data-page-header="water"><div class="pageTitle">Wasser</div><div class="pageSubtitle">Verbrauch, Durchfluss, Kosten und Einsparung</div></div>
+<div class="pageHeader" data-page-header="history"><div class="pageTitle">Historie</div><div class="pageSubtitle">Gespeicherte Bewässerungsereignisse</div></div>
+<div class="pageHeader" data-page-header="system"><div class="pageTitle">System</div><div class="pageSubtitle">Backup, WLAN, Diagnose und technische Einstellungen</div></div>
+<div class="top pageSection pageActive" data-page="dashboard"><div><h1>GardenFlow by HK 2026 V1.0</h1><div class="muted" id="address">wird verbunden …</div></div><div id="clock" class="big">--:--</div></div>
+<section class="card dashboardHero pageSection pageActive" data-page="dashboard">
   <div class="top">
     <div>
       <div class="muted">Dashboard</div>
@@ -106,7 +147,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
     Letztes Ereignis: <span id="dashLastEvent">--</span>
   </div>
 </section>
-<section class="card" style="margin-top:12px">
+<section class="card pageSection pageActive" data-page="dashboard" style="margin-top:12px">
   <div class="top">
     <div><div class="muted">Systemstatus</div><div id="healthHeadline" class="big">System wird geprüft …</div></div>
     <span id="healthBadge" class="badge">--</span>
@@ -123,12 +164,19 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
     <div class="healthItem"><div class="healthLabel">Letztes Backup</div><div id="healthBackup" class="healthValue">--</div></div>
   </div>
 </section>
-<section class="card" style="margin-top:12px">
+<section class="card pageSection" data-page="history" style="margin-top:12px">
   <div class="top"><div><div class="muted">Bewässerungshistorie</div><div class="big">Letzte Ereignisse</div></div><span id="historyCount" class="badge">0</span></div>
   <div class="setupNote">Die letzten Bewässerungsereignisse aus dem persistenten HistoryManager.</div>
+  <div class="historyTools">
+    <label class="field"><span>Zeitraum</span><select id="historyPeriod" onchange="renderHistory()"><option value="all">Alle geladenen</option><option value="today">Heute</option><option value="week">Letzte 7 Tage</option><option value="month">Letzte 30 Tage</option></select></label>
+    <label class="field"><span>Ereignis</span><select id="historyEventFilter" onchange="renderHistory()"><option value="">Alle</option><option value="start">Gestartet</option><option value="stop">Beendet / Abgebrochen</option><option value="skipped">Übersprungen</option></select></label>
+    <label class="field"><span>Ventil</span><select id="historyValveFilter" onchange="renderHistory()"><option value="">Alle</option><option value="0">Ventil 1</option><option value="1">Ventil 2</option></select></label>
+    <button class="secondary" onclick="downloadHistoryCsv()">CSV exportieren</button>
+    <button class="secondary" onclick="downloadHistoryJson()">JSON exportieren</button>
+  </div>
   <div id="historyList" class="historyList"><div class="historyEmpty">Historie wird geladen …</div></div>
 </section>
-<div class="grid">
+<div class="grid pageGrid pageActive" data-page="dashboard">
   <section class="card"><div class="muted">System</div><div class="row"><span>WLAN</span><span id="wifi" class="badge">--</span></div><div class="row"><span>Zeit</span><span id="timeState" class="badge">--</span></div><div class="row"><span>Automatik</span><span id="autoState" class="badge">--</span></div></section>
   <section class="card"><div class="muted">Wetter</div><div id="weatherMain" class="big">nicht eingerichtet</div><div id="weatherDetails" class="muted">API-Schluessel fehlt</div><div class="row"><span>Regenpause</span><span id="rainPause" class="badge">--</span></div><div style="margin-top:10px"><button class="secondary" onclick="post('/api/weather/refresh')">Aktualisieren</button></div></section>
   <section class="card"><div class="muted">Aktueller Lauf</div><div id="running" class="big">Kein Programm</div><div id="remaining" class="muted">--</div><div style="margin-top:12px"><button class="stop" id="stop" onclick="post('/api/stop')">STOPP</button></div></section>
@@ -153,8 +201,8 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
     <div class="setupNote">Die Zähler werden beim Programmende dauerhaft gespeichert. Während eines laufenden Programms wird der aktuelle Verbrauch bereits live angezeigt.</div>
   </section>
 </div>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Wettersteuerung <span id="weatherDirtyMark" class="dirtyMark"></span></div><div class="big">Automatische Regenpause</div></div></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Automatik</span><select id="weatherEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Regenmenge 24 h (mm)</span><input id="weatherRainMm" type="number" min="0.1" max="100" step="0.1"></label><label class="field"><span>Regenwahrscheinlichkeit (%)</span><input id="weatherPop" type="number" min="1" max="100"></label><div class="field"><span>&nbsp;</span><div><button class="secondary" onclick="cancelWeatherSettings()">Abbrechen</button> <button onclick="saveWeatherSettings()">Speichern</button></div></div></div><div id="weatherSaveState" class="saveState"></div></section>
-<section class="card" style="margin-top:12px">
+<section class="card pageSection" data-page="smart" style="margin-top:12px"><div class="top"><div><div class="muted">Wettersteuerung <span id="weatherDirtyMark" class="dirtyMark"></span></div><div class="big">Automatische Regenpause</div></div></div><div class="formgrid" style="margin-top:12px"><label class="field"><span>Automatik</span><select id="weatherEnabled"><option value="1">Ein</option><option value="0">Aus</option></select></label><label class="field"><span>Regenmenge 24 h (mm)</span><input id="weatherRainMm" type="number" min="0.1" max="100" step="0.1"></label><label class="field"><span>Regenwahrscheinlichkeit (%)</span><input id="weatherPop" type="number" min="1" max="100"></label><div class="field"><span>&nbsp;</span><div><button class="secondary" onclick="cancelWeatherSettings()">Abbrechen</button> <button onclick="saveWeatherSettings()">Speichern</button></div></div></div><div id="weatherSaveState" class="saveState"></div></section>
+<section class="card pageSection" data-page="smart" style="margin-top:12px">
 <div class="top"><div><div class="muted">Smart Control <span id="smartDirtyMark" class="dirtyMark"></span></div><div class="big">Saison & Urlaub</div></div><span id="vacationState" class="badge">--</span></div>
 <div class="formgrid" style="margin-top:12px">
 <label class="field"><span>Saisonsteuerung</span><select id="seasonAutomatic"><option value="1">Automatisch aus Standort & Datum</option><option value="0">Manueller Faktor</option></select></label>
@@ -167,10 +215,10 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <label class="field"><span>Laufzeit im Urlaub (%)</span><input id="vacationPercent" type="number" min="10" max="100" step="5"></label>
 <div class="field full"><button class="secondary" onclick="cancelSmartSettings()">Abbrechen</button> <button onclick="saveSmartSettings()">Smart-Einstellungen speichern</button></div>
 </div><div id="smartSaveState" class="saveState"></div></section>
-<section class="card nextProgram"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
-<section class="card" style="margin-top:12px">
+<section class="card nextProgram pageSection" data-page="programs"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
+<section class="card pageSection" data-page="programs" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
+<section class="card pageSection" data-page="programs" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
+<section class="card pageSection" data-page="smart" style="margin-top:12px">
 <div class="top">
   <div>
     <div class="muted">Advisor-Simulator</div>
@@ -191,7 +239,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 </div>
 <div id="simResult" class="simResult"><div class="muted">Simulation wird vorbereitet …</div></div>
 </section>
-<section class="card" style="margin-top:12px">
+<section class="card pageSection" data-page="smart" style="margin-top:12px">
 <div class="top">
   <div>
     <div class="muted">Garden Profiles</div>
@@ -203,7 +251,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <div id="profileGrid" class="profileGrid"><div class="muted">Profile werden geladen …</div></div>
 <div id="profileSaveState" class="saveState"></div>
 </section>
-<section class="card" style="margin-top:12px">
+<section class="card pageSection" data-page="water" style="margin-top:12px">
 <div class="top"><div><div class="muted">Wasserbilanz</div><div class="big">Durchfluss & Kosten</div></div></div>
 <div class="formgrid" style="margin-top:12px">
 <label class="field"><span>Ventil 1 (Liter/Minute)</span><input id="waterFlow1" type="number" min="0" max="250" step="0.1"></label>
@@ -213,7 +261,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 </div>
 <div id="waterSaveState" class="saveState"></div>
 </section>
-<section class="card" style="margin-top:12px">
+<section class="card pageSection" data-page="system" style="margin-top:12px">
 <div class="top"><div><div class="muted">Datensicherung</div><div class="big">GardenFlow Backup</div></div><span class="badge ok">JSON</span></div>
 <div class="setupNote">Sichert Programme, Gartenprofile, Wasserparameter, Einstellungen und Statistik. Passwörter und API-Schlüssel sind in dieser Version nicht enthalten.</div>
 <div style="margin-top:12px"><button onclick="downloadGardenFlowBackup()">Backup herunterladen</button></div>
@@ -224,8 +272,8 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <div style="margin-top:10px"><button class="stop" onclick="restoreGardenFlowBackup()">Backup wiederherstellen</button></div>
 <div id="backupState" class="saveState"></div>
 </section>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Setup</div><div class="big">WLAN und Standort</div></div><span id="setupState" class="badge">--</span></div><div class="setupGrid"><label class="field"><span>WLAN-Name (SSID)</span><input id="setupSsid" maxlength="32" autocomplete="off"></label><label class="field"><span>WLAN-Passwort</span><input id="setupPassword" type="password" placeholder="leer = unverändert" autocomplete="new-password"></label><label class="field"><span>Breitengrad</span><input id="setupLatitude" type="number" min="-90" max="90" step="0.00001"></label><label class="field"><span>Längengrad</span><input id="setupLongitude" type="number" min="-180" max="180" step="0.00001"></label><label class="field full"><span>Zeitzone (POSIX)</span><input id="setupTimezone" value="CET-1CEST,M3.5.0/2,M10.5.0/3"></label></div><div class="setupNote">Deutschland: Der voreingestellte Zeitzonenwert berücksichtigt Sommer- und Winterzeit automatisch. Nach dem Speichern startet GardenFlow neu.</div><div style="margin-top:12px"><button onclick="saveSetup()">WLAN und Standort speichern</button> <button class="secondary" onclick="startSetupPortal()">Setup-Portal starten</button></div><div id="setupSaveState" class="saveState"></div></section>
-<section class="card" style="margin-top:12px"><div class="top"><div><div class="muted">Diagnose</div><div class="big">Ereignisprotokoll</div></div><span id="logCount" class="badge">0</span></div><div class="logTools"><select id="logFilter" onchange="renderLog()"><option value="">Alle Kategorien</option><option>System</option><option>WLAN</option><option>Zeit</option><option>Wetter</option><option>Programm</option><option>Ventil</option><option>Scheduler</option><option>Fehler</option></select><input id="logSearch" placeholder="Suchen" oninput="renderLog()"><button class="secondary" onclick="loadLog()">Aktualisieren</button><button class="stop" onclick="clearLog()">Löschen</button></div><div id="logList" class="logList"><div class="muted" style="padding:10px">Protokoll wird geladen …</div></div></section>
+<section class="card pageSection" data-page="system" style="margin-top:12px"><div class="top"><div><div class="muted">Setup</div><div class="big">WLAN und Standort</div></div><span id="setupState" class="badge">--</span></div><div class="setupGrid"><label class="field"><span>WLAN-Name (SSID)</span><input id="setupSsid" maxlength="32" autocomplete="off"></label><label class="field"><span>WLAN-Passwort</span><input id="setupPassword" type="password" placeholder="leer = unverändert" autocomplete="new-password"></label><label class="field"><span>Breitengrad</span><input id="setupLatitude" type="number" min="-90" max="90" step="0.00001"></label><label class="field"><span>Längengrad</span><input id="setupLongitude" type="number" min="-180" max="180" step="0.00001"></label><label class="field full"><span>Zeitzone (POSIX)</span><input id="setupTimezone" value="CET-1CEST,M3.5.0/2,M10.5.0/3"></label></div><div class="setupNote">Deutschland: Der voreingestellte Zeitzonenwert berücksichtigt Sommer- und Winterzeit automatisch. Nach dem Speichern startet GardenFlow neu.</div><div style="margin-top:12px"><button onclick="saveSetup()">WLAN und Standort speichern</button> <button class="secondary" onclick="startSetupPortal()">Setup-Portal starten</button></div><div id="setupSaveState" class="saveState"></div></section>
+<section class="card pageSection" data-page="system" style="margin-top:12px"><div class="top"><div><div class="muted">Diagnose</div><div class="big">Ereignisprotokoll</div></div><span id="logCount" class="badge">0</span></div><div class="logTools"><select id="logFilter" onchange="renderLog()"><option value="">Alle Kategorien</option><option>System</option><option>WLAN</option><option>Zeit</option><option>Wetter</option><option>Programm</option><option>Ventil</option><option>Scheduler</option><option>Fehler</option></select><input id="logSearch" placeholder="Suchen" oninput="renderLog()"><button class="secondary" onclick="loadLog()">Aktualisieren</button><button class="stop" onclick="clearLog()">Löschen</button></div><div id="logList" class="logList"><div class="muted" style="padding:10px">Protokoll wird geladen …</div></div></section>
 <div id="editorModal" class="modal" onclick="modalBackdrop(event)"><div class="dialog">
   <div class="top"><div><div class="muted">Programm</div><div id="editorTitle" class="big">Neu</div></div><button class="secondary" onclick="closeEditor()">Schließen</button></div>
   <div class="formgrid" style="margin-top:16px">
@@ -238,6 +286,45 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <div class="actions"><button class="secondary" onclick="closeEditor()">Abbrechen</button><button onclick="saveEditor()">Speichern</button></div>
 </div></div>
 <script>
+const GARDENFLOW_PAGES=['dashboard','programs','smart','water','history','system'];
+
+function showPage(page){
+    if(!GARDENFLOW_PAGES.includes(page))page='dashboard';
+
+    document.querySelectorAll('[data-page]').forEach(element=>{
+        const active=element.dataset.page===page;
+        element.classList.toggle('pageActive',active);
+    });
+
+    document.querySelectorAll('[data-page-header]').forEach(element=>{
+        element.classList.toggle('pageActive',element.dataset.pageHeader===page);
+    });
+
+    document.querySelectorAll('[data-page-target]').forEach(button=>{
+        button.classList.toggle('active',button.dataset.pageTarget===page);
+    });
+
+    try{localStorage.setItem('gardenflowPage',page);}catch(e){}
+    closeMainMenu();
+    window.scrollTo({top:0,behavior:'smooth'});
+}
+
+function toggleMainMenu(){
+    document.getElementById('mainMenu').classList.toggle('open');
+    document.getElementById('menuOverlay').classList.toggle('open');
+}
+
+function closeMainMenu(){
+    document.getElementById('mainMenu').classList.remove('open');
+    document.getElementById('menuOverlay').classList.remove('open');
+}
+
+function restoreSelectedPage(){
+    let page='dashboard';
+    try{page=localStorage.getItem('gardenflowPage')||'dashboard';}catch(e){}
+    showPage(page);
+}
+
 const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 async function api(url,opt){const r=await fetch(url,opt);const t=await r.text();if(!r.ok)throw new Error(t||r.status);return t?JSON.parse(t):{};}
 async function post(url,data){
@@ -858,7 +945,14 @@ async function resetWaterStatistics(){
     }
 }
 
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;
+const menuState=document.getElementById('menuConnectionState');
+if(menuState){
+    menuState.textContent=s.wifi
+        ? `● Online · ${s.rssi} dBm`
+        : '● WLAN getrennt';
+}
+updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -1254,6 +1348,8 @@ async function restoreGardenFlowBackup(){
 }
 
 
+let historyCache=[];
+
 function historyEventLabel(entry){
     if(entry.event==='start')return entry.automatic?'Automatik gestartet':'Manuell gestartet';
     if(entry.event==='stop')return entry.reason==='user_stop'?'Bewässerung abgebrochen':'Bewässerung beendet';
@@ -1267,10 +1363,7 @@ function historyEventLabel(entry){
 function historyTimestamp(epoch){
     const value=Number(epoch||0);
     if(value<=0)return 'Zeit unbekannt';
-    return new Date(value*1000).toLocaleString('de-DE',{
-        day:'2-digit',month:'2-digit',year:'numeric',
-        hour:'2-digit',minute:'2-digit'
-    });
+    return new Date(value*1000).toLocaleString('de-DE',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'});
 }
 function historyDuration(seconds){
     const total=Math.max(0,Number(seconds||0));
@@ -1278,36 +1371,69 @@ function historyDuration(seconds){
     const rest=total%60;
     return rest?`${minutes} min ${rest} s`:`${minutes} min`;
 }
+function filteredHistory(){
+    const period=document.getElementById('historyPeriod')?.value||'all';
+    const eventFilter=document.getElementById('historyEventFilter')?.value||'';
+    const valveFilter=document.getElementById('historyValveFilter')?.value??'';
+    const now=Date.now()/1000;
+    let minEpoch=0;
+    if(period==='today'){const d=new Date();d.setHours(0,0,0,0);minEpoch=d.getTime()/1000;}
+    else if(period==='week')minEpoch=now-7*86400;
+    else if(period==='month')minEpoch=now-30*86400;
+    return historyCache.filter(entry=>{
+        if(minEpoch>0&&Number(entry.timestamp||0)<minEpoch)return false;
+        if(eventFilter&&entry.event!==eventFilter)return false;
+        if(valveFilter!==''&&String(entry.valve)!==String(valveFilter))return false;
+        return true;
+    });
+}
+function renderHistory(){
+    const list=document.getElementById('historyList');
+    if(!list)return;
+    const entries=filteredHistory();
+    const total=document.getElementById('historyCount');
+    if(total)total.textContent=`${entries.length} sichtbar · ${historyCache.length} geladen`;
+    if(!entries.length){list.innerHTML='<div class="historyEmpty">Keine passenden Historieneinträge.</div>';return;}
+    list.innerHTML=entries.map(entry=>{
+        const stopped=entry.event==='stop';
+        const skipped=entry.event==='skipped';
+        const plan=entry.event==='start'?`Geplant ${historyDuration(entry.plannedSeconds)}`:stopped?`Ist ${historyDuration(entry.actualSeconds)} · Soll ${historyDuration(entry.plannedSeconds)}`:`Geplant ${historyDuration(entry.plannedSeconds)}`;
+        const amount=stopped&&Number(entry.liters)>0?`${Number(entry.liters).toFixed(1)} l · ${Number(entry.costEuro).toFixed(2)} €`:(skipped?'nicht ausgeführt':'');
+        return `<div class="historyRow ${skipped?'historySkipped':''}"><div>${esc(historyTimestamp(entry.timestamp))}</div><div><div class="historyTitle">${esc(historyEventLabel(entry))}</div><div class="historyMeta">Programm ${entry.programId} · Ventil ${entry.valve+1} · Profil ${entry.profile} · ${esc(plan)} · Advisor ${entry.advisorPercent>=0?'+':''}${entry.advisorPercent}% · Saison ${entry.seasonPercent}%</div></div><div class="historyValue">${esc(amount)}</div></div>`;
+    }).join('');
+}
 async function loadHistory(){
     const list=document.getElementById('historyList');
     try{
-        const data=await api('/api/history');
-        document.getElementById('historyCount').textContent=`${data.total} / 1000`;
-        if(!data.entries.length){
-            list.innerHTML='<div class="historyEmpty">Noch keine Bewässerungsereignisse gespeichert.</div>';
-            return;
-        }
-        list.innerHTML=data.entries.map(entry=>{
-            const stopped=entry.event==='stop';
-            const skipped=entry.event==='skipped';
-            const plan=entry.event==='start'
-                ?`Geplant ${historyDuration(entry.plannedSeconds)}`
-                :stopped
-                    ?`Ist ${historyDuration(entry.actualSeconds)} · Soll ${historyDuration(entry.plannedSeconds)}`
-                    :`Geplant ${historyDuration(entry.plannedSeconds)}`;
-            const amount=stopped&&Number(entry.liters)>0
-                ?`${Number(entry.liters).toFixed(1)} l · ${Number(entry.costEuro).toFixed(2)} €`
-                :(skipped?'nicht ausgeführt':'');
-            return `<div class="historyRow ${skipped?'historySkipped':''}">
-                <div>${esc(historyTimestamp(entry.timestamp))}</div>
-                <div><div class="historyTitle">${esc(historyEventLabel(entry))}</div>
-                <div class="historyMeta">Programm ${entry.programId} · Ventil ${entry.valve+1} · Profil ${entry.profile} · ${esc(plan)} · Advisor ${entry.advisorPercent>=0?'+':''}${entry.advisorPercent}% · Saison ${entry.seasonPercent}%</div></div>
-                <div class="historyValue">${esc(amount)}</div>
-            </div>`;
-        }).join('');
+        const data=await api('/api/history?limit=200');
+        historyCache=Array.isArray(data.entries)?data.entries:[];
+        renderHistory();
     }catch(e){
-        list.innerHTML='<div class="historyEmpty error">Historie konnte nicht geladen werden.</div>';
+        historyCache=[];
+        if(list)list.innerHTML='<div class="historyEmpty error">Historie konnte nicht geladen werden.</div>';
     }
+}
+function csvEscape(value){const text=String(value??'');return `"${text.replace(/"/g,'""')}"`;}
+function downloadTextFile(filename,text,mime){
+    const blob=new Blob([text],{type:mime});
+    const url=URL.createObjectURL(blob);
+    const link=document.createElement('a');
+    link.href=url;link.download=filename;document.body.appendChild(link);link.click();link.remove();URL.revokeObjectURL(url);
+}
+function historyExportFilename(ext){
+    const d=new Date(),pad=v=>String(v).padStart(2,'0');
+    return `gardenflow_history_${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}_${pad(d.getHours())}${pad(d.getMinutes())}.${ext}`;
+}
+function downloadHistoryCsv(){
+    const rows=filteredHistory();
+    const header=['ID','Datum','Ereignis','Grund','Programm','Ventil','Profil','Soll Sekunden','Ist Sekunden','Liter','Kosten EUR','Advisor %','Saison %','Automatisch','Firmware'];
+    const lines=[header.map(csvEscape).join(';')];
+    rows.forEach(entry=>lines.push([entry.id,historyTimestamp(entry.timestamp),historyEventLabel(entry),entry.reason,entry.programId,Number(entry.valve)+1,entry.profile,entry.plannedSeconds,entry.actualSeconds,Number(entry.liters||0).toFixed(2),Number(entry.costEuro||0).toFixed(3),entry.advisorPercent,entry.seasonPercent,entry.automatic?'ja':'nein',entry.firmware].map(csvEscape).join(';')));
+    downloadTextFile(historyExportFilename('csv'),'\ufeff'+lines.join('\n'),'text/csv;charset=utf-8');
+}
+function downloadHistoryJson(){
+    const rows=filteredHistory();
+    downloadTextFile(historyExportFilename('json'),JSON.stringify({exportedAt:new Date().toISOString(),count:rows.length,entries:rows},null,2),'application/json');
 }
 
 async function loadAll(){
@@ -1321,7 +1447,7 @@ async function loadAll(){
     await loadStatus();
     await loadLog();
     await loadHistory();
-}bindSettingsForms();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
+}bindSettingsForms();restoreSelectedPage();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
 </script>
 </body></html>
 )HTML";
@@ -2460,15 +2586,30 @@ void WebManager::handleHistory()
         return;
     }
 
-    constexpr uint16_t MAX_WEB_ENTRIES = 30;
+    constexpr uint16_t DEFAULT_WEB_ENTRIES = 30;
+    constexpr uint16_t MAX_WEB_ENTRIES = 200;
+
+    uint16_t requested = DEFAULT_WEB_ENTRIES;
+
+    if (server_.hasArg("limit"))
+    {
+        const int parsed = server_.arg("limit").toInt();
+
+        if (parsed > 0)
+        {
+            requested = static_cast<uint16_t>(
+                constrain(parsed, 1, static_cast<int>(MAX_WEB_ENTRIES))
+            );
+        }
+    }
 
     const uint16_t total =
         historyManager_->count();
 
     const uint16_t visible =
-        total < MAX_WEB_ENTRIES
+        total < requested
             ? total
-            : MAX_WEB_ENTRIES;
+            : requested;
 
     String body;
     body.reserve(
