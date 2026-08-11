@@ -77,6 +77,21 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
  .menuOverlay.open{display:block}
 }
 
+
+.weekPlannerWrap{overflow:auto;margin-top:12px;border:1px solid #304237;border-radius:12px;background:#101714}
+.weekPlanner{display:grid;grid-template-columns:64px repeat(7,minmax(105px,1fr));min-width:850px;position:relative}
+.weekCorner,.weekDayHead{position:sticky;top:0;z-index:6;background:#18231d;border-bottom:1px solid #3a4d40;min-height:42px;display:flex;align-items:center;justify-content:center;font-weight:800}
+.weekCorner{left:0;z-index:8}
+.weekTime{position:sticky;left:0;z-index:4;background:#121b16;border-right:1px solid #304237;border-bottom:1px solid #24342b;height:48px;padding:4px 8px;font-size:.75rem;color:#9fb2a5}
+.weekCell{position:relative;height:48px;border-right:1px solid #24342b;border-bottom:1px solid #24342b;background:linear-gradient(to bottom,#17211b 0,#17211b 49%,#141d18 50%,#141d18 100%)}
+.weekEvent{position:absolute;left:4px;right:4px;z-index:3;border-radius:7px;padding:4px 6px;font-size:.75rem;font-weight:800;overflow:hidden;cursor:pointer;box-shadow:0 2px 7px #0007;border:1px solid #ffffff22}
+.weekEvent:hover{filter:brightness(1.18);z-index:5}.weekEvent.v1{background:#2d7645;color:#fff}.weekEvent.v2{background:#315f91;color:#fff}
+.weekEvent.disabled{opacity:.38;filter:saturate(.4)}.weekEventTitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.weekEventMeta{font-size:.68rem;font-weight:600;opacity:.9;white-space:nowrap}
+.weekLegend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;color:#b8c6bc;font-size:.86rem}.legendDot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}.legendV1{background:#2d7645}.legendV2{background:#315f91}
+.weekNowLine{position:absolute;left:64px;right:0;height:2px;background:#ff786e;z-index:2;pointer-events:none}
+.weekNowLabel{position:absolute;left:3px;transform:translateY(-50%);font-size:.68rem;color:#ff9d96;background:#101714;padding:1px 3px}
+@media(max-width:820px){.weekPlannerWrap{margin-left:0}.weekPlanner{min-width:790px}}
+
 </style>
 </head>
 <body>
@@ -89,6 +104,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   </div>
   <button class="menuButton active" data-page-target="dashboard" onclick="showPage('dashboard')"><span class="menuIcon">⌂</span>Dashboard</button>
   <button class="menuButton" data-page-target="programs" onclick="showPage('programs')"><span class="menuIcon">▤</span>Programme</button>
+  <button class="menuButton" data-page-target="weekplan" onclick="showPage('weekplan')"><span class="menuIcon">▦</span>Wochenplan</button>
   <button class="menuButton" data-page-target="smart" onclick="showPage('smart')"><span class="menuIcon">✦</span>Smart Control</button>
   <button class="menuButton" data-page-target="water" onclick="showPage('water')"><span class="menuIcon">◉</span>Wasser</button>
   <button class="menuButton" data-page-target="history" onclick="showPage('history')"><span class="menuIcon">↺</span>Historie</button>
@@ -98,6 +114,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 </nav>
 <div class="pageHeader pageActive" data-page-header="dashboard"><div class="pageTitle">Dashboard</div><div class="pageSubtitle">Aktueller Zustand und nächste Bewässerung</div></div>
 <div class="pageHeader" data-page-header="programs"><div class="pageTitle">Programme</div><div class="pageSubtitle">Bewässerungsplan und manuelle Steuerung</div></div>
+<div class="pageHeader" data-page-header="weekplan"><div class="pageTitle">Wochenplan</div><div class="pageSubtitle">Grafische Übersicht Montag bis Sonntag</div></div>
 <div class="pageHeader" data-page-header="smart"><div class="pageTitle">Smart Control</div><div class="pageSubtitle">Wetter, Saison, Urlaub, Advisor und Pflanzenprofile</div></div>
 <div class="pageHeader" data-page-header="water"><div class="pageTitle">Wasser</div><div class="pageSubtitle">Verbrauch, Durchfluss, Kosten und Einsparung</div></div>
 <div class="pageHeader" data-page-header="history"><div class="pageTitle">Historie</div><div class="pageSubtitle">Gespeicherte Bewässerungsereignisse</div></div>
@@ -218,6 +235,15 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <section class="card nextProgram pageSection" data-page="programs"><div class="top"><div><div class="muted">Nächstes Programm</div><div id="nextProgramTime" class="nextProgramTime">--:--</div><div id="nextProgramMeta" class="nextProgramMeta">Kein aktives Programm geplant</div></div><span id="nextProgramWhen" class="badge">--</span></div></section>
 <section class="card pageSection" data-page="programs" style="margin-top:12px"><div class="top"><div><div class="muted">Zeitplan</div><div class="big">Heute, morgen und diese Woche</div></div><button class="secondary" onclick="loadAll()">Aktualisieren</button></div><div id="upcomingPrograms"></div></section>
 <section class="card pageSection" data-page="programs" style="margin-top:12px"><div class="top"><div><div class="muted">Programme</div><div class="big">Alle Programme</div></div><button onclick="newProgram()">+ Neu</button></div><div id="programs"></div></section>
+<section class="card pageSection" data-page="weekplan" style="margin-top:12px">
+  <div class="top">
+    <div><div class="muted">Kalenderansicht</div><div class="big">Bewässerungswoche</div></div>
+    <button class="secondary" onclick="renderWeeklyCalendar()">Aktualisieren</button>
+  </div>
+  <div class="setupNote">Ein Balken zeigt Startzeit und Dauer. Klick auf einen Balken öffnet den vorhandenen Programmeditor.</div>
+  <div class="weekLegend"><span><span class="legendDot legendV1"></span>Ventil 1</span><span><span class="legendDot legendV2"></span>Ventil 2</span><span>Abgeblendet = Programm deaktiviert</span></div>
+  <div id="weekPlannerWrap" class="weekPlannerWrap"><div id="weekPlanner" class="weekPlanner"></div></div>
+</section>
 <section class="card pageSection" data-page="smart" style="margin-top:12px">
 <div class="top">
   <div>
@@ -286,7 +312,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <div class="actions"><button class="secondary" onclick="closeEditor()">Abbrechen</button><button onclick="saveEditor()">Speichern</button></div>
 </div></div>
 <script>
-const GARDENFLOW_PAGES=['dashboard','programs','smart','water','history','system'];
+const GARDENFLOW_PAGES=['dashboard','programs','weekplan','smart','water','history','system'];
 
 function showPage(page){
     if(!GARDENFLOW_PAGES.includes(page))page='dashboard';
@@ -952,7 +978,7 @@ if(menuState){
         ? `● Online · ${s.rssi} dBm`
         : '● WLAN getrennt';
 }
-updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);if(document.querySelector('[data-page="weekplan"].pageActive'))renderWeeklyCalendar();if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -1113,6 +1139,77 @@ function renderAllPrograms(running){
         : '<div class="muted">Keine Programme vorhanden</div>';
 }
 
+
+function renderWeeklyCalendar(){
+    const planner=document.getElementById('weekPlanner');
+    if(!planner)return;
+
+    const dayLabels=['Mo','Di','Mi','Do','Fr','Sa','So'];
+    const cellHeight=48;
+    let html='<div class="weekCorner">Zeit</div>';
+    dayLabels.forEach(day=>html+=`<div class="weekDayHead">${day}</div>`);
+
+    for(let hour=0;hour<24;hour++){
+        html+=`<div class="weekTime">${String(hour).padStart(2,'0')}:00</div>`;
+        for(let day=0;day<7;day++){
+            html+=`<div class="weekCell" data-week-day="${day}" data-week-hour="${hour}"></div>`;
+        }
+    }
+
+    planner.innerHTML=html;
+
+    const cells=[...planner.querySelectorAll('.weekCell')];
+
+    programCache.forEach(program=>{
+        if(!program.weekdays)return;
+
+        for(let day=0;day<7;day++){
+            if((program.weekdays&(1<<day))===0)continue;
+
+            const hour=Number(program.hour||0);
+            const minute=Number(program.minute||0);
+            const duration=Math.max(1,Number(program.durationMinutes||1));
+
+            const cell=cells.find(c=>
+                Number(c.dataset.weekDay)===day &&
+                Number(c.dataset.weekHour)===hour
+            );
+            if(!cell)continue;
+
+            const event=document.createElement('div');
+            event.className=`weekEvent v${Number(program.valve)+1}${program.enabled?'':' disabled'}`;
+
+            const top=(minute/60)*cellHeight;
+            const height=Math.max(18,(duration/60)*cellHeight);
+
+            event.style.top=`${top}px`;
+            event.style.height=`${height}px`;
+
+            const start=`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
+            const profile=program.profileName||'Allgemein';
+            event.title=`Programm ${program.id}\nVentil ${Number(program.valve)+1}\nProfil ${profile}\nStart ${start}\nDauer ${duration} min\n${program.enabled?'Aktiv':'Inaktiv'}`;
+            event.innerHTML=`<div class="weekEventTitle">${esc(start)} · ${esc(profile)}</div><div class="weekEventMeta">V${Number(program.valve)+1} · ${duration} min</div>`;
+            event.onclick=()=>editProgram(program.index);
+            cell.appendChild(event);
+        }
+    });
+
+    // Aktuelle Uhrzeit als Orientierungslinie, wenn Controllerzeit verfügbar ist.
+    if(lastStatus&&lastStatus.time){
+        const parts=String(lastStatus.time).split(':');
+        if(parts.length>=2){
+            const hours=Number(parts[0]),minutes=Number(parts[1]);
+            if(Number.isFinite(hours)&&Number.isFinite(minutes)){
+                const line=document.createElement('div');
+                line.className='weekNowLine';
+                line.style.top=`${42 + (hours + minutes/60)*cellHeight}px`;
+                line.innerHTML=`<span class="weekNowLabel">${String(hours).padStart(2,'0')}:${String(minutes).padStart(2,'0')}</span>`;
+                planner.appendChild(line);
+            }
+        }
+    }
+}
+
 async function loadPrograms(){
     try{
         const p=await api('/api/programs');
@@ -1120,6 +1217,7 @@ async function loadPrograms(){
         renderNextProgram();
         renderUpcomingPrograms();
         renderAllPrograms(p.running);
+        renderWeeklyCalendar();
     }catch(e){
         document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>';
         document.getElementById('upcomingPrograms').innerHTML='<div class="error">Zeitplan konnte nicht geladen werden</div>';
