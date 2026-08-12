@@ -84,8 +84,8 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .weekCorner{left:0;z-index:8}
 .weekTime{position:sticky;left:0;z-index:4;background:#121b16;border-right:1px solid #304237;border-bottom:1px solid #24342b;height:48px;padding:4px 8px;font-size:.75rem;color:#9fb2a5}
 .weekCell{position:relative;height:48px;border-right:1px solid #24342b;border-bottom:1px solid #24342b;background:linear-gradient(to bottom,#17211b 0,#17211b 49%,#141d18 50%,#141d18 100%)}
-.weekEvent{position:absolute;left:4px;right:4px;z-index:3;border-radius:7px;padding:4px 6px;font-size:.75rem;font-weight:800;overflow:hidden;cursor:pointer;box-shadow:0 2px 7px #0007;border:1px solid #ffffff22}
-.weekEvent:hover{filter:brightness(1.18);z-index:5}.weekEvent.v1{background:#2d7645;color:#fff}.weekEvent.v2{background:#315f91;color:#fff}
+.weekEvent{position:absolute;touch-action:none;user-select:none;left:4px;right:4px;z-index:3;border-radius:7px;padding:4px 6px;font-size:.75rem;font-weight:800;overflow:hidden;cursor:pointer;box-shadow:0 2px 7px #0007;border:1px solid #ffffff22}
+.weekEvent:hover{filter:brightness(1.18);z-index:5}.weekEvent.dragging{opacity:.72;z-index:10;outline:2px solid #fff8;cursor:grabbing;box-shadow:0 8px 20px #000a}.weekEvent.resizing{opacity:.75;z-index:10;outline:2px solid #ffd27a;box-shadow:0 8px 20px #000a}.weekResize{position:absolute;left:3px;right:3px;bottom:1px;height:7px;border-radius:4px;cursor:ns-resize;background:#ffffff38}.weekDragHint{margin-top:8px;padding:8px 10px;border-radius:9px;background:#132019;color:#b8c9bd;font-size:.82rem}.weekGridControls{display:flex;gap:6px;align-items:center;flex-wrap:wrap}.weekGridControls .gridStep{padding:7px 10px;background:#33463a;color:#edf5ef}.weekGridControls .gridStep.active{background:#7fda98;color:#102016}.weekTargetBadge{position:fixed;z-index:80;pointer-events:none;background:#0b130f;color:#fff;border:1px solid #6c8f77;border-radius:8px;padding:5px 8px;font-size:.8rem;font-weight:800;box-shadow:0 4px 14px #0009}.weekSaveState{min-height:1.4em;margin-top:8px;color:#a8b7ad}.weekSaveState.okmsg{color:#7fda98}.weekSaveState.errmsg{color:#ff9e98}.weekEvent.v1{background:#2d7645;color:#fff}.weekEvent.v2{background:#315f91;color:#fff}
 .weekEvent.disabled{opacity:.38;filter:saturate(.4)}.weekEventTitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.weekEventMeta{font-size:.68rem;font-weight:600;opacity:.9;white-space:nowrap}
 .weekLegend{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;color:#b8c6bc;font-size:.86rem}.legendDot{display:inline-block;width:10px;height:10px;border-radius:50%;margin-right:5px}.legendV1{background:#2d7645}.legendV2{background:#315f91}
 .weekNowLine{position:absolute;left:64px;right:0;height:2px;background:#ff786e;z-index:2;pointer-events:none}
@@ -238,11 +238,19 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <section class="card pageSection" data-page="weekplan" style="margin-top:12px">
   <div class="top">
     <div><div class="muted">Kalenderansicht</div><div class="big">Bewässerungswoche</div></div>
-    <button class="secondary" onclick="renderWeeklyCalendar()">Aktualisieren</button>
+    <div class="weekGridControls">
+      <span class="muted">Raster:</span>
+      <button class="gridStep" data-grid-step="5" onclick="setWeekGridStep(5)">5 min</button>
+      <button class="gridStep" data-grid-step="15" onclick="setWeekGridStep(15)">15 min</button>
+      <button class="gridStep" data-grid-step="30" onclick="setWeekGridStep(30)">30 min</button>
+      <button class="secondary" onclick="renderWeeklyCalendar()">Aktualisieren</button>
+    </div>
   </div>
-  <div class="setupNote">Ein Balken zeigt Startzeit und Dauer. Klick auf einen Balken öffnet den vorhandenen Programmeditor.</div>
+  <div class="setupNote">Ein Balken zeigt Startzeit und Dauer. Klick öffnet den Programmeditor. Ziehen verschiebt das gesamte Programm; der Griff unten ändert die Laufzeit.</div>
   <div class="weekLegend"><span><span class="legendDot legendV1"></span>Ventil 1</span><span><span class="legendDot legendV2"></span>Ventil 2</span><span>Abgeblendet = Programm deaktiviert</span></div>
+  <div class="weekDragHint">Das Raster kann oben auf 5, 15 oder 30 Minuten gestellt werden. Beim Ziehen wird die Zielzeit neben dem Mauszeiger angezeigt. ESC bricht die Aktion ab.</div>
   <div id="weekPlannerWrap" class="weekPlannerWrap"><div id="weekPlanner" class="weekPlanner"></div></div>
+  <div id="weekSaveState" class="weekSaveState"></div>
 </section>
 <section class="card pageSection" data-page="smart" style="margin-top:12px">
 <div class="top">
@@ -1140,7 +1148,268 @@ function renderAllPrograms(running){
 }
 
 
+let weekGridStepMinutes=5;
+
+function loadWeekGridStep(){
+    try{
+        const stored=Number(localStorage.getItem('gardenflowWeekGridStep')||5);
+        weekGridStepMinutes=[5,15,30].includes(stored)?stored:5;
+    }catch(e){
+        weekGridStepMinutes=5;
+    }
+    updateWeekGridButtons();
+}
+
+function setWeekGridStep(step){
+    const value=Number(step);
+    if(![5,15,30].includes(value))return;
+    weekGridStepMinutes=value;
+    try{localStorage.setItem('gardenflowWeekGridStep',String(value));}catch(e){}
+    updateWeekGridButtons();
+    renderWeeklyCalendar();
+}
+
+function updateWeekGridButtons(){
+    document.querySelectorAll('[data-grid-step]').forEach(button=>{
+        button.classList.toggle('active',Number(button.dataset.gridStep)===weekGridStepMinutes);
+    });
+}
+
+function snapWeekMinutes(value){
+    return Math.round(Number(value)/weekGridStepMinutes)*weekGridStepMinutes;
+}
+
+let weekInteraction=null;
+
+function weekSetState(text,type=''){
+    const el=document.getElementById('weekSaveState');
+    if(!el)return;
+    el.textContent=text||'';
+    el.className='weekSaveState'+(type?' '+type:'');
+}
+
+function weekShiftMask(mask,delta){
+    let result=0;
+    for(let day=0;day<7;day++){
+        if(mask&(1<<day)){
+            const shifted=((day+delta)%7+7)%7;
+            result|=(1<<shifted);
+        }
+    }
+    return result&0x7f;
+}
+
+function weekPointerToSlot(clientX,clientY,grabOffsetMinutes=0){
+    const planner=document.getElementById('weekPlanner');
+    if(!planner)return null;
+    const rect=planner.getBoundingClientRect();
+    const headerHeight=42;
+    const timeWidth=64;
+    const usableWidth=Math.max(1,rect.width-timeWidth);
+    const dayWidth=usableWidth/7;
+    const x=clientX-rect.left-timeWidth;
+    const y=clientY-rect.top-headerHeight;
+
+    const day=Math.max(0,Math.min(6,Math.floor(x/dayWidth)));
+    const pointerMinutes=(y/48)*60;
+    const rawStartMinutes=pointerMinutes-grabOffsetMinutes;
+    const totalMinutes=Math.max(0,Math.min(1435,snapWeekMinutes(rawStartMinutes)));
+
+    return {
+        day,
+        hour:Math.floor(totalMinutes/60),
+        minute:totalMinutes%60,
+        totalMinutes
+    };
+}
+
+function cancelWeekInteraction(){
+    if(!weekInteraction)return;
+    const state=weekInteraction;
+    weekInteraction=null;
+    window.removeEventListener('pointermove',weekEventPointerMove);
+    state.element.classList.remove('dragging','resizing');
+    if(state.targetBadge){
+        state.targetBadge.remove();
+        state.targetBadge=null;
+    }
+    weekSetState('Änderung abgebrochen');
+    renderWeeklyCalendar();
+}
+
+function weekKeyDown(event){
+    if(event.key==='Escape' && weekInteraction){
+        event.preventDefault();
+        cancelWeekInteraction();
+    }
+}
+
+window.addEventListener('keydown',weekKeyDown);
+
+function weekEventPointerDown(event){
+    if(event.button!==undefined&&event.button!==0)return;
+
+    const element=event.currentTarget;
+    const programIndex=Number(element.dataset.programIndex);
+    const occurrenceDay=Number(element.dataset.day);
+    const program=programCache.find(p=>Number(p.index)===programIndex);
+    if(!program)return;
+
+    const resize=event.target.classList.contains('weekResize');
+
+    const elementRect=element.getBoundingClientRect();
+    const elementHeight=Math.max(1,elementRect.height);
+    const grabRatio=Math.max(0,Math.min(1,(event.clientY-elementRect.top)/elementHeight));
+    const grabOffsetMinutes=grabRatio*Number(program.durationMinutes||1);
+
+    weekInteraction={
+        mode:resize?'resize':'move',
+        element,
+        program,
+        occurrenceDay,
+        startX:event.clientX,
+        startY:event.clientY,
+        originalHour:Number(program.hour),
+        originalMinute:Number(program.minute),
+        originalDuration:Number(program.durationMinutes),
+        originalDays:Number(program.weekdays),
+        grabOffsetMinutes,
+        changed:false,
+        targetBadge:null
+    };
+
+    element.setPointerCapture?.(event.pointerId);
+
+    window.addEventListener('pointermove',weekEventPointerMove,{passive:false});
+    window.addEventListener('pointerup',weekEventPointerUp,{once:true});
+    event.preventDefault();
+    event.stopPropagation();
+}
+
+function weekEventPointerMove(event){
+    if(!weekInteraction)return;
+
+    const state=weekInteraction;
+    const distance=Math.hypot(
+        event.clientX-state.startX,
+        event.clientY-state.startY
+    );
+
+    /*
+     * Erst ab 5 Pixel Bewegung wird aus einem normalen Klick
+     * wirklich eine Drag-/Resize-Aktion.
+     */
+    if(!state.changed && distance<5){
+        return;
+    }
+
+    if(!state.changed){
+        state.changed=true;
+        state.element.classList.add(
+            state.mode==='resize'?'resizing':'dragging'
+        );
+        if(state.mode==='move'){
+            const badge=document.createElement('div');
+            badge.className='weekTargetBadge';
+            badge.textContent='--:--';
+            document.body.appendChild(badge);
+            state.targetBadge=badge;
+        }
+    }
+
+    event.preventDefault();
+
+    if(state.mode==='resize'){
+        const rawDelta=((event.clientY-state.startY)/48)*60;
+        const deltaMinutes=snapWeekMinutes(rawDelta);
+        const duration=Math.max(1,Math.min(240,state.originalDuration+deltaMinutes));
+        const snapped=Math.max(1,snapWeekMinutes(duration));
+        state.previewDuration=snapped;
+        state.element.style.height=`${Math.max(18,(snapped/60)*48)}px`;
+        const meta=state.element.querySelector('.weekEventMeta');
+        if(meta)meta.textContent=`V${Number(state.program.valve)+1} · ${snapped} min`;
+    }else{
+        const slot=weekPointerToSlot(event.clientX,event.clientY,state.grabOffsetMinutes);
+        if(!slot)return;
+
+        state.previewSlot=slot;
+
+        const title=state.element.querySelector('.weekEventTitle');
+        const time=`${String(slot.hour).padStart(2,'0')}:${String(slot.minute).padStart(2,'0')}`;
+        if(title){
+            title.textContent=`${time} · ${state.program.profileName||'Allgemein'}`;
+        }
+        if(state.targetBadge){
+            state.targetBadge.textContent=`${['Mo','Di','Mi','Do','Fr','Sa','So'][slot.day]} ${time} · ${weekGridStepMinutes} min`;
+            state.targetBadge.style.left=`${event.clientX+14}px`;
+            state.targetBadge.style.top=`${event.clientY+14}px`;
+        }
+    }
+}
+
+async function weekEventPointerUp(event){
+    if(!weekInteraction)return;
+
+    const state=weekInteraction;
+    weekInteraction=null;
+
+    window.removeEventListener('pointermove',weekEventPointerMove);
+
+    state.element.classList.remove('dragging','resizing');
+
+    if(state.targetBadge){state.targetBadge.remove();state.targetBadge=null;}
+
+    /*
+     * Keine echte Bewegung:
+     * - normaler Balken -> Programmeditor öffnen
+     * - Resize-Griff -> nichts ändern
+     */
+    if(!state.changed){
+        if(state.mode==='move'){
+            editProgram(state.program.index);
+        }else{
+            renderWeeklyCalendar();
+        }
+        return;
+    }
+
+    try{
+        weekSetState('Änderung wird gespeichert …');
+
+        if(state.mode==='resize'){
+            const duration=Number(state.previewDuration||state.originalDuration);
+            await post('/api/program/update',{
+                index:state.program.index,
+                duration
+            });
+        }else{
+            const slot=state.previewSlot||weekPointerToSlot(event.clientX,event.clientY,state.grabOffsetMinutes);
+            if(!slot){
+                renderWeeklyCalendar();
+                return;
+            }
+
+            const dayDelta=slot.day-state.occurrenceDay;
+            const days=weekShiftMask(state.originalDays,dayDelta);
+
+            await post('/api/program/update',{
+                index:state.program.index,
+                hour:slot.hour,
+                minute:slot.minute,
+                days
+            });
+        }
+
+        await loadPrograms();
+        weekSetState('Wochenplan gespeichert','okmsg');
+    }catch(error){
+        renderWeeklyCalendar();
+        weekSetState('Speichern fehlgeschlagen: '+error.message,'errmsg');
+    }
+}
+
 function renderWeeklyCalendar(){
+    updateWeekGridButtons();
     const planner=document.getElementById('weekPlanner');
     if(!planner)return;
 
@@ -1188,8 +1457,15 @@ function renderWeeklyCalendar(){
             const start=`${String(hour).padStart(2,'0')}:${String(minute).padStart(2,'0')}`;
             const profile=program.profileName||'Allgemein';
             event.title=`Programm ${program.id}\nVentil ${Number(program.valve)+1}\nProfil ${profile}\nStart ${start}\nDauer ${duration} min\n${program.enabled?'Aktiv':'Inaktiv'}`;
-            event.innerHTML=`<div class="weekEventTitle">${esc(start)} · ${esc(profile)}</div><div class="weekEventMeta">V${Number(program.valve)+1} · ${duration} min</div>`;
-            event.onclick=()=>editProgram(program.index);
+            event.innerHTML=`<div class="weekEventTitle">${esc(start)} · ${esc(profile)}</div><div class="weekEventMeta">V${Number(program.valve)+1} · ${duration} min</div><div class="weekResize" title="Laufzeit ändern"></div>`;
+            event.dataset.programIndex=String(program.index);
+            event.dataset.day=String(day);
+            event.addEventListener('pointerdown',weekEventPointerDown);
+            event.addEventListener('dblclick',e=>{
+                e.preventDefault();
+                e.stopPropagation();
+                editProgram(program.index);
+            });
             cell.appendChild(event);
         }
     });
@@ -1545,7 +1821,7 @@ async function loadAll(){
     await loadStatus();
     await loadLog();
     await loadHistory();
-}bindSettingsForms();restoreSelectedPage();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
+}bindSettingsForms();loadWeekGridStep();restoreSelectedPage();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
 </script>
 </body></html>
 )HTML";
