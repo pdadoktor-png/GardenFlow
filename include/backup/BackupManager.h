@@ -8,6 +8,7 @@ class Scheduler;
 class WaterManager;
 class SeasonManager;
 class AdvisorEngine;
+class GardenManager;
 
 class BackupManager
 {
@@ -18,7 +19,8 @@ public:
         Scheduler& scheduler,
         WaterManager& waterManager,
         SeasonManager& seasonManager,
-        AdvisorEngine& advisorEngine);
+        AdvisorEngine& advisorEngine,
+        GardenManager& gardenManager);
 
     String createBackupJson() const;
     bool restoreBackupJson(const String& json, String& message);
@@ -31,6 +33,7 @@ private:
     WaterManager* waterManager_ = nullptr;
     SeasonManager* seasonManager_ = nullptr;
     AdvisorEngine* advisorEngine_ = nullptr;
+    GardenManager* gardenManager_ = nullptr;
     mutable time_t lastBackupEpoch_ = 0;
 
     static String jsonEscape(const String& value);

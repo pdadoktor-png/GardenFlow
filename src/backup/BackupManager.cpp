@@ -4,6 +4,7 @@
 
 #include "advisor/AdvisorEngine.h"
 #include "profiles/GardenProfiles.h"
+#include "garden/GardenManager.h"
 #include "scheduler/Scheduler.h"
 #include "season/SeasonManager.h"
 #include "settings/SettingsManager.h"
@@ -16,7 +17,8 @@ void BackupManager::begin(
     Scheduler& scheduler,
     WaterManager& waterManager,
     SeasonManager& seasonManager,
-    AdvisorEngine& advisorEngine)
+    AdvisorEngine& advisorEngine,
+    GardenManager& gardenManager)
 {
     settingsManager_ = &settingsManager;
     weatherManager_ = &weatherManager;
@@ -24,6 +26,7 @@ void BackupManager::begin(
     waterManager_ = &waterManager;
     seasonManager_ = &seasonManager;
     advisorEngine_ = &advisorEngine;
+    gardenManager_ = &gardenManager;
 
     Serial.println("BackupManager initialisiert");
 }
@@ -142,6 +145,11 @@ String BackupManager::createBackupJson() const
     body += F(",\"priceEuroPerM3\":");
     body += String(waterManager_->waterPrice(), 2);
     body += F("}");
+
+    // Persistente Gartenkarte aus /garden.json.
+    body += F(",\"garden\":");
+    body += gardenManager_->exportJson();
+
     body += F("}"); // configuration
 
     // Momentaufnahme des aktuellen Systemzustands. Dieser Bereich wird
@@ -556,11 +564,44 @@ bool BackupManager::restoreBackupJson(
         }
     }
 
+    uint8_t restoredGardenZones = gardenManager_->count();
+
+    /*
+     * "garden" ist absichtlich optional, damit ältere GardenFlow-Backups
+     * weiterhin wiederhergestellt werden können.
+     */
+    JsonObject garden =
+        configuration["garden"].as<JsonObject>();
+
+    if (!garden.isNull())
+    {
+        String gardenJson;
+        serializeJson(garden, gardenJson);
+
+        String gardenMessage;
+
+        if (!gardenManager_->importJson(
+                gardenJson,
+                gardenMessage
+            ))
+        {
+            message =
+                String("Gartenkarte konnte nicht wiederhergestellt werden: ") +
+                gardenMessage;
+            return false;
+        }
+
+        restoredGardenZones =
+            gardenManager_->count();
+    }
+
     message =
         String(programs.size()) +
-        " Programme und " +
+        " Programme, " +
         String(profiles.size()) +
-        " Profile wiederhergestellt";
+        " Profile und " +
+        String(restoredGardenZones) +
+        " Gartenzonen wiederhergestellt";
 
     return true;
 }
@@ -599,5 +640,6 @@ bool BackupManager::ready() const
            scheduler_ != nullptr &&
            waterManager_ != nullptr &&
            seasonManager_ != nullptr &&
-           advisorEngine_ != nullptr;
+           advisorEngine_ != nullptr &&
+           gardenManager_ != nullptr;
 }

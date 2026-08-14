@@ -20,6 +20,7 @@
 #include "season/SeasonManager.h"
 #include "backup/BackupManager.h"
 #include "history/HistoryManager.h"
+#include "garden/GardenManager.h"
 
 static ValveManager valveManager;
 static DisplayManager displayManager;
@@ -37,6 +38,7 @@ static WaterManager waterManager;
 static SeasonManager seasonManager;
 static BackupManager backupManager;
 static HistoryManager historyManager;
+static GardenManager gardenManager;
 
 void setup()
 {
@@ -57,13 +59,16 @@ void setup()
     GardenProfiles::begin();
     scheduler.begin();
     
+
+    gardenManager.begin();
     backupManager.begin(
         settingsManager,
         weatherManager,
         scheduler,
         waterManager,
         seasonManager,
-        advisorEngine
+        advisorEngine,
+        gardenManager
     );
     if (setupPortal.isActive())
     {
@@ -114,7 +119,8 @@ void setup()
             waterManager,
             seasonManager,
             backupManager,
-            historyManager);
+            historyManager,
+            gardenManager);
 
         Log.begin(&timeManager);
         Log.info(LogManager::Category::System, "GardenFlow gestartet");

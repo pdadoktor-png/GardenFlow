@@ -18,6 +18,7 @@
 #include "season/SeasonManager.h"
 #include "backup/BackupManager.h"
 #include "history/HistoryManager.h"
+#include "garden/GardenManager.h"
 
 namespace
 {
@@ -92,6 +93,21 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .weekNowLabel{position:absolute;left:3px;transform:translateY(-50%);font-size:.68rem;color:#ff9d96;background:#101714;padding:1px 3px}
 @media(max-width:820px){.weekPlannerWrap{margin-left:0}.weekPlanner{min-width:790px}}
 
+
+.gardenToolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
+.gardenCanvasWrap{margin-top:12px;border:1px solid #304237;border-radius:14px;overflow:auto;background:#0e1712}
+.gardenCanvas{position:relative;width:100%;min-width:720px;aspect-ratio:16/9;background:linear-gradient(90deg,#ffffff08 1px,transparent 1px),linear-gradient(#ffffff08 1px,transparent 1px),radial-gradient(circle at 35% 30%,#264d32 0,#18351f 38%,#102619 72%);background-size:32px 32px,32px 32px,100% 100%;overflow:hidden}
+.gardenZone{position:absolute;border:2px solid #ffffff55;border-radius:14px;box-shadow:0 6px 18px #0007;cursor:move;user-select:none;touch-action:none;min-width:70px;min-height:48px;overflow:hidden}
+.gardenZone.selected{outline:3px solid #fff9;z-index:5}.gardenZone.watering{outline:3px solid #74d9ff;box-shadow:0 0 0 3px #74d9ff33,0 0 22px #45bde388;animation:gardenWaterPulse 1.4s ease-in-out infinite}.gardenZone.watering .gardenZoneHeader{background:#063d4ccc}.gardenZone.watering .gardenZoneMeta{background:#0a5366cc}.gardenWaterBadge{position:absolute;right:7px;top:7px;padding:3px 6px;border-radius:999px;background:#77ddff;color:#07313b;font-size:.68rem;font-weight:900;box-shadow:0 2px 8px #0007}@keyframes gardenWaterPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
+.gardenZoneHeader{padding:7px 9px;font-weight:850;background:#0005;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.gardenZoneMeta{padding:5px 9px;font-size:.76rem;background:#0004}
+.gardenResizeHandle{position:absolute;right:2px;bottom:2px;width:16px;height:16px;border-radius:4px;background:#fff7;cursor:nwse-resize}
+.gardenInspector{margin-top:12px;display:none}.gardenInspector.open{display:block}
+.gardenInspectorGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.gardenStats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-top:12px}.gardenStat{padding:10px 12px;border:1px solid #304237;border-radius:10px;background:#111b16}.gardenStatLabel{font-size:.76rem;color:#9fb2a5}.gardenStatValue{font-size:1.05rem;font-weight:850;margin-top:3px}.gardenZoneHistory{margin-top:10px;border-top:1px solid #304237;padding-top:10px}
+.gardenEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9fb2a5;font-size:1.05rem;pointer-events:none}
+.gardenStatus{min-height:1.4em;margin-top:8px;padding:7px 10px;border-radius:8px;color:#9fb2a5}.gardenStatus.okmsg{color:#7fda98;background:#173321}.gardenStatus.errmsg{color:#ff9e98;background:#3a1d1d}
+@media(max-width:820px){.gardenCanvas{min-width:680px}.gardenToolbar button{flex:1}}
+
 </style>
 </head>
 <body>
@@ -105,6 +121,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <button class="menuButton active" data-page-target="dashboard" onclick="showPage('dashboard')"><span class="menuIcon">⌂</span>Dashboard</button>
   <button class="menuButton" data-page-target="programs" onclick="showPage('programs')"><span class="menuIcon">▤</span>Programme</button>
   <button class="menuButton" data-page-target="weekplan" onclick="showPage('weekplan')"><span class="menuIcon">▦</span>Wochenplan</button>
+  <button class="menuButton" data-page-target="garden" onclick="showPage('garden')"><span class="menuIcon">⌘</span>Garten</button>
   <button class="menuButton" data-page-target="smart" onclick="showPage('smart')"><span class="menuIcon">✦</span>Smart Control</button>
   <button class="menuButton" data-page-target="water" onclick="showPage('water')"><span class="menuIcon">◉</span>Wasser</button>
   <button class="menuButton" data-page-target="history" onclick="showPage('history')"><span class="menuIcon">↺</span>Historie</button>
@@ -115,6 +132,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 <div class="pageHeader pageActive" data-page-header="dashboard"><div class="pageTitle">Dashboard</div><div class="pageSubtitle">Aktueller Zustand und nächste Bewässerung</div></div>
 <div class="pageHeader" data-page-header="programs"><div class="pageTitle">Programme</div><div class="pageSubtitle">Bewässerungsplan und manuelle Steuerung</div></div>
 <div class="pageHeader" data-page-header="weekplan"><div class="pageTitle">Wochenplan</div><div class="pageSubtitle">Grafische Übersicht Montag bis Sonntag</div></div>
+<div class="pageHeader" data-page-header="garden"><div class="pageTitle">Garten</div><div class="pageSubtitle">Interaktive Gartenkarte und Bewässerungszonen</div></div>
 <div class="pageHeader" data-page-header="smart"><div class="pageTitle">Smart Control</div><div class="pageSubtitle">Wetter, Saison, Urlaub, Advisor und Pflanzenprofile</div></div>
 <div class="pageHeader" data-page-header="water"><div class="pageTitle">Wasser</div><div class="pageSubtitle">Verbrauch, Durchfluss, Kosten und Einsparung</div></div>
 <div class="pageHeader" data-page-header="history"><div class="pageTitle">Historie</div><div class="pageSubtitle">Gespeicherte Bewässerungsereignisse</div></div>
@@ -252,6 +270,51 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <div id="weekPlannerWrap" class="weekPlannerWrap"><div id="weekPlanner" class="weekPlanner"></div></div>
   <div id="weekSaveState" class="weekSaveState"></div>
 </section>
+<section class="card pageSection" data-page="garden" style="margin-top:12px">
+  <div class="top">
+    <div><div class="muted">Interaktive Gartenkarte</div><div class="big">Bewässerungszonen</div></div>
+    <span id="gardenZoneCount" class="badge">0</span>
+  </div>
+  <div class="setupNote">Flächen können verschoben und vergrößert werden. Jede Zone bekommt Name, Pflanzenprofil und Ventil. In dieser ersten Version wird die Karte im Browser gespeichert.</div>
+  <div class="gardenToolbar">
+    <button onclick="addGardenZone()">+ Zone hinzufügen</button>
+    <button class="secondary" onclick="saveGardenMap()">Karte speichern</button>
+    <button class="secondary" onclick="resetGardenMap()">Karte zurücksetzen</button>
+  </div>
+  <div id="gardenStatus" class="gardenStatus"></div>
+
+  <div id="gardenInspector" class="card gardenInspector">
+    <div class="top">
+      <div><div class="muted">Ausgewählte Zone</div><div id="gardenInspectorTitle" class="big">--</div></div>
+      <div>
+        <button onclick="saveSelectedGardenZone()">Zone speichern</button>
+        <button class="stop" onclick="deleteSelectedGardenZone()">Zone löschen</button>
+      </div>
+    </div>
+    <div class="gardenInspectorGrid">
+      <label class="field"><span>Name</span><input id="gardenZoneName" maxlength="24" oninput="updateSelectedGardenZoneFromInspector(false)"></label>
+      <label class="field"><span>Profil</span><select id="gardenZoneProfile" onchange="updateSelectedGardenZoneFromInspector(true)"></select></label>
+      <label class="field"><span>Ventil</span><select id="gardenZoneValve" onchange="updateSelectedGardenZoneFromInspector(true)"><option value="0">Ventil 1</option><option value="1">Ventil 2</option></select></label>
+      <label class="field"><span>Programm</span><select id="gardenZoneProgram" onchange="updateSelectedGardenZoneFromInspector(true)"></select></label>
+      <label class="field"><span>Programm öffnen</span><button class="secondary" onclick="openSelectedGardenProgram()">Programmeditor öffnen</button></label>
+      <label class="field"><span>Farbe</span><input id="gardenZoneColor" type="color" value="#2d7645" oninput="updateSelectedGardenZoneFromInspector(false)" onchange="updateSelectedGardenZoneFromInspector(true)"></label>
+    </div>
+    <div class="gardenStats">
+      <div class="gardenStat"><div class="gardenStatLabel">Letzte Bewässerung</div><div id="gardenLastWatering" class="gardenStatValue">--</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Abgeschlossene Läufe</div><div id="gardenRunCount" class="gardenStatValue">0</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Aktueller Lauf</div><div id="gardenCurrentRun" class="gardenStatValue">--</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Wasser inkl. laufendem Programm</div><div id="gardenLiters" class="gardenStatValue">0,0 l</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Kosten inkl. laufendem Programm</div><div id="gardenCost" class="gardenStatValue">0,00 €</div></div>
+    </div>
+    <div id="gardenZoneHistory" class="gardenZoneHistory setupNote">Für Historie bitte ein Programm zuordnen.</div>
+  </div>
+
+  <div class="gardenCanvasWrap">
+    <div id="gardenCanvas" class="gardenCanvas">
+      <div id="gardenEmpty" class="gardenEmpty">Noch keine Gartenbereiche angelegt</div>
+    </div>
+  </div>
+</section>
 <section class="card pageSection" data-page="smart" style="margin-top:12px">
 <div class="top">
   <div>
@@ -320,7 +383,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   <div class="actions"><button class="secondary" onclick="closeEditor()">Abbrechen</button><button onclick="saveEditor()">Speichern</button></div>
 </div></div>
 <script>
-const GARDENFLOW_PAGES=['dashboard','programs','weekplan','smart','water','history','system'];
+const GARDENFLOW_PAGES=['dashboard','programs','weekplan','garden','smart','water','history','system'];
 
 function showPage(page){
     if(!GARDENFLOW_PAGES.includes(page))page='dashboard';
@@ -617,6 +680,8 @@ async function loadProfiles(){
         const data=await api('/api/profiles');
         profileCache=data.profiles||[];
         renderProfileEditor();
+        renderGardenProfileSelector();
+        renderGardenMap();
     }catch(e){
         setSaveState(
             'profileSaveState',
@@ -979,14 +1044,31 @@ async function resetWaterStatistics(){
     }
 }
 
-async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));lastStatus=s;
+async function loadStatus(){try{const s=await api('/api/status');document.getElementById('clock').textContent=s.date+' '+s.time;document.getElementById('address').textContent=s.ssid+' · '+s.ip+' · '+s.rssi+' dBm';badge('wifi',s.wifi?'verbunden':'getrennt',s.wifi?'ok':'off');badge('timeState',s.timeValid?'synchronisiert':'wartet',s.timeValid?'ok':'warn');badge('autoState',s.rainPause?'Regenpause':(s.timeValid?'bereit':'gesperrt'),s.rainPause?'warn':(s.timeValid?'ok':'warn'));document.getElementById('weatherMain').textContent=s.weatherValid?(s.temperature.toFixed(1)+' °C · '+s.weatherDescription):(s.weatherConfigured?'wartet auf Daten':'nicht eingerichtet');document.getElementById('weatherDetails').textContent=s.weatherValid?('Feuchte '+s.humidity+' % · Regen '+s.rainMm.toFixed(1)+' mm/24h · Risiko '+s.rainProbability+' %'):(s.weatherError||'OpenWeather API-Schluessel eintragen');badge('rainPause',s.rainPause?'AKTIV':(s.weatherPauseEnabled?'bereit':'aus'),s.rainPause?'warn':(s.weatherPauseEnabled?'ok':'off'));const previousGardenRunActive=
+    !!lastStatus &&
+    (
+        !!lastStatus.running ||
+        !!lastStatus.manualRun
+    );
+
+lastStatus=s;
+
+const currentGardenRunActive=
+    !!s.running ||
+    !!s.manualRun;
+
+if(previousGardenRunActive &&
+   !currentGardenRunActive){
+    void loadHistory();
+}
+
 const menuState=document.getElementById('menuConnectionState');
 if(menuState){
     menuState.textContent=s.wifi
         ? `● Online · ${s.rssi} dBm`
         : '● WLAN getrennt';
 }
-updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);if(document.querySelector('[data-page="weekplan"].pageActive'))renderWeeklyCalendar();if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);updateGardenLiveState();renderGardenZoneStatistics();if(document.querySelector('[data-page="weekplan"].pageActive'))renderWeeklyCalendar();if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -1494,6 +1576,9 @@ async function loadPrograms(){
         renderUpcomingPrograms();
         renderAllPrograms(p.running);
         renderWeeklyCalendar();
+        renderGardenProgramSelector();
+        renderGardenMap();
+        renderGardenZoneStatistics();
     }catch(e){
         document.getElementById('programs').innerHTML='<div class="error">Programme konnten nicht geladen werden</div>';
         document.getElementById('upcomingPrograms').innerHTML='<div class="error">Zeitplan konnte nicht geladen werden</div>';
@@ -1782,6 +1867,7 @@ async function loadHistory(){
         const data=await api('/api/history?limit=200');
         historyCache=Array.isArray(data.entries)?data.entries:[];
         renderHistory();
+        renderGardenZoneStatistics();
     }catch(e){
         historyCache=[];
         if(list)list.innerHTML='<div class="historyEmpty error">Historie konnte nicht geladen werden.</div>';
@@ -1810,6 +1896,572 @@ function downloadHistoryJson(){
     downloadTextFile(historyExportFilename('json'),JSON.stringify({exportedAt:new Date().toISOString(),count:rows.length,entries:rows},null,2),'application/json');
 }
 
+
+let gardenZones=[];
+let selectedGardenZoneId=null;
+let gardenInteraction=null;
+
+function gardenMapStorageKey(){return 'gardenflowGardenMapV1';}
+
+async function loadGardenMap(){
+    let loadedFromEsp=false;
+    try{
+        const data=await api('/api/garden');
+        gardenZones=Array.isArray(data.zones)?data.zones.map(zone=>({
+            id:Number(zone.id||0),
+            name:String(zone.name||'Zone'),
+            profileId:Number(zone.profile||0),
+            valve:Number(zone.valve||0),
+            programIndex:Number(zone.program??-1),
+            color:String(zone.color||'#2d7645'),
+            x:Number(zone.x??10),
+            y:Number(zone.y??10),
+            w:Number(zone.width??24),
+            h:Number(zone.height??18)
+        })):[];
+        loadedFromEsp=true;
+        try{localStorage.setItem(gardenMapStorageKey(),JSON.stringify(gardenZones));}catch(e){}
+    }catch(error){
+        try{
+            const raw=localStorage.getItem(gardenMapStorageKey());
+            gardenZones=raw?JSON.parse(raw):[];
+            if(!Array.isArray(gardenZones))gardenZones=[];
+            setGardenStatus('ESP-Gartenkarte nicht erreichbar – Browser-Sicherung geladen','errmsg');
+        }catch(e){gardenZones=[];}
+    }
+    normalizeGardenZones();
+    renderGardenMap();
+    if(loadedFromEsp)setGardenStatus(`Gartenkarte vom ESP geladen · ${gardenZones.length} Zone(n)`,'okmsg');
+}
+
+function normalizeGardenZones(){
+    gardenZones=gardenZones.map((zone,index)=>({
+        id:Number(zone.id||Date.now()+index),
+        name:String(zone.name||`Zone ${index+1}`),
+        profileId:Number(zone.profileId||0),
+        valve:Number(zone.valve||0),
+        programIndex:Number(zone.programIndex??-1),
+        color:String(zone.color||'#2d7645'),
+        x:Math.max(0,Math.min(90,Number(zone.x??10))),
+        y:Math.max(0,Math.min(85,Number(zone.y??10))),
+        w:Math.max(8,Math.min(80,Number(zone.w??24))),
+        h:Math.max(8,Math.min(80,Number(zone.h??18)))
+    }));
+}
+
+async function saveGardenMap(){
+    const payload={
+        version:1,
+        zones:gardenZones.map(zone=>({
+            id:Number(zone.id||0),
+            name:String(zone.name||'Zone'),
+            profile:Number(zone.profileId||0),
+            valve:Number(zone.valve||0),
+            program:Number(zone.programIndex??-1),
+            shape:'rect',
+            x:Number(zone.x||0),
+            y:Number(zone.y||0),
+            width:Number(zone.w||8),
+            height:Number(zone.h||8),
+            color:String(zone.color||'#2d7645')
+        }))
+    };
+    let espSaved=false;
+    let espError='';
+    try{
+        await api('/api/garden/save',{
+            method:'POST',
+            headers:{'Content-Type':'application/json'},
+            body:JSON.stringify(payload)
+        });
+        espSaved=true;
+    }catch(error){
+        espError=error.message||String(error);
+    }
+
+    let browserSaved=false;
+    try{
+        localStorage.setItem(gardenMapStorageKey(),JSON.stringify(gardenZones));
+        browserSaved=true;
+    }catch(e){}
+
+    if(espSaved){
+        setGardenStatus(`Gartenkarte gespeichert · ${gardenZones.length} Zone(n) · ESP + Browser-Sicherung`,'okmsg');
+        return true;
+    }
+    if(browserSaved){
+        setGardenStatus(`ESP-Speicherung fehlgeschlagen (${espError}) · Browser-Sicherung gespeichert`,'errmsg');
+        return false;
+    }
+    setGardenStatus(`Speichern fehlgeschlagen: ${espError||'unbekannter Fehler'}`,'errmsg');
+    return false;
+}
+
+async function resetGardenMap(){
+    if(!confirm('Gartenkarte wirklich zurücksetzen?'))return;
+    let espOk=false;
+    try{
+        await api('/api/garden/reset',{method:'POST'});
+        espOk=true;
+    }catch(e){}
+    gardenZones=[];selectedGardenZoneId=null;
+    try{localStorage.removeItem(gardenMapStorageKey());}catch(e){}
+    renderGardenMap();
+    setGardenStatus(
+        espOk?'Gartenkarte im ESP und Browser zurückgesetzt':'Browser-Gartenkarte zurückgesetzt · ESP nicht erreichbar',
+        espOk?'okmsg':'errmsg'
+    );
+}
+
+function addGardenZone(){
+    const id=Date.now(),index=gardenZones.length;
+    gardenZones.push({id,name:`Zone ${index+1}`,profileId:0,valve:index%2,programIndex:-1,color:index%2?'#315f91':'#2d7645',x:8+(index%4)*8,y:8+(index%5)*7,w:24,h:18});
+    selectedGardenZoneId=id;renderGardenMap();void saveGardenMap();
+}
+
+function setGardenStatus(text,type=''){
+    const state=document.getElementById('gardenStatus');
+    if(!state)return;
+    state.textContent=text||'';state.className='gardenStatus'+(type?' '+type:'');
+}
+
+function gardenProfileName(profileId){
+    const profile=profileCache.find(p=>Number(p.id)===Number(profileId));
+    return profile?profile.name:'Allgemein';
+}
+
+function renderGardenProfileSelector(){
+    const select=document.getElementById('gardenZoneProfile');
+    if(!select)return;
+    const selected=select.value;
+    select.innerHTML=(profileCache||[]).map(p=>`<option value="${p.id}">${esc(p.name)}</option>`).join('')||'<option value="0">Allgemein</option>';
+    if([...select.options].some(o=>o.value===selected))select.value=selected;
+}
+
+function gardenValveIsOpen(valveIndex){
+    if(!lastStatus || !Array.isArray(lastStatus.valves))return false;
+    const valve=lastStatus.valves[Number(valveIndex)];
+    return !!(valve && valve.open);
+}
+
+function updateGardenLiveState(){
+    const canvas=document.getElementById('gardenCanvas');
+    if(!canvas)return;
+    gardenZones.forEach(zone=>{
+        const element=canvas.querySelector(`[data-zone-id="${zone.id}"]`);
+        if(!element)return;
+        const active=gardenValveIsOpen(zone.valve);
+        element.classList.toggle('watering',active);
+        let badge=element.querySelector('.gardenWaterBadge');
+        if(active && !badge){
+            badge=document.createElement('div');
+            badge.className='gardenWaterBadge';
+            badge.textContent='💧 AKTIV';
+            element.appendChild(badge);
+        }else if(!active && badge){
+            badge.remove();
+        }
+        const meta=element.querySelector('.gardenZoneMeta');
+        if(meta)meta.textContent=`${gardenProfileName(zone.profileId)} · Ventil ${Number(zone.valve)+1}${gardenProgramLabel(zone.programIndex)?' · '+gardenProgramLabel(zone.programIndex):''}${active?' · Bewässerung läuft':''}`;
+    });
+}
+
+function gardenProgramLabel(programIndex){
+    const program=programCache.find(p=>Number(p.index)===Number(programIndex));
+    if(!program)return '';
+    const hh=String(program.hour).padStart(2,'0');
+    const mm=String(program.minute).padStart(2,'0');
+    return `Programm ${program.id} · ${hh}:${mm} · ${program.durationMinutes} min`;
+}
+
+function renderGardenProgramSelector(){
+    const select=document.getElementById('gardenZoneProgram');
+    if(!select)return;
+
+    const current=select.value;
+
+    let html='<option value="-1">Kein Programm</option>';
+
+    programCache.forEach(program=>{
+        const hh=String(program.hour).padStart(2,'0');
+        const mm=String(program.minute).padStart(2,'0');
+        const profile=program.profileName||'Allgemein';
+        html+=`<option value="${program.index}">P${program.id} · ${hh}:${mm} · V${Number(program.valve)+1} · ${esc(profile)}</option>`;
+    });
+
+    select.innerHTML=html;
+
+    if([...select.options].some(o=>o.value===current)){
+        select.value=current;
+    }
+}
+
+function openSelectedGardenProgram(){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+
+    if(!zone || Number(zone.programIndex)<0){
+        setGardenStatus('Dieser Zone ist noch kein Programm zugeordnet','errmsg');
+        return;
+    }
+
+    const program=programCache.find(p=>Number(p.index)===Number(zone.programIndex));
+
+    if(!program){
+        setGardenStatus('Das zugeordnete Programm existiert nicht mehr','errmsg');
+        return;
+    }
+
+    editProgram(program.index);
+}
+
+function renderGardenMap(){
+    const canvas=document.getElementById('gardenCanvas');
+    if(!canvas)return;
+    canvas.querySelectorAll('.gardenZone').forEach(z=>z.remove());
+    const empty=document.getElementById('gardenEmpty');
+    if(empty)empty.style.display=gardenZones.length?'none':'flex';
+    const count=document.getElementById('gardenZoneCount');
+    if(count)count.textContent=String(gardenZones.length);
+
+    gardenZones.forEach(zone=>{
+        const element=document.createElement('div');
+        element.className='gardenZone'+(zone.id===selectedGardenZoneId?' selected':'')+(gardenValveIsOpen(zone.valve)?' watering':'');
+        element.dataset.zoneId=String(zone.id);
+        element.style.left=`${zone.x}%`;element.style.top=`${zone.y}%`;element.style.width=`${zone.w}%`;element.style.height=`${zone.h}%`;element.style.background=zone.color+'cc';
+        const watering=gardenValveIsOpen(zone.valve);
+        const programLabel=gardenProgramLabel(zone.programIndex);
+        element.innerHTML=`<div class="gardenZoneHeader">${esc(zone.name)}</div><div class="gardenZoneMeta">${esc(gardenProfileName(zone.profileId))} · Ventil ${Number(zone.valve)+1}${programLabel?' · '+esc(programLabel):''}${watering?' · Bewässerung läuft':''}</div>${watering?'<div class="gardenWaterBadge">💧 AKTIV</div>':''}<div class="gardenResizeHandle"></div>`;
+        element.addEventListener('pointerdown',gardenZonePointerDown);
+        element.addEventListener('click',e=>{e.stopPropagation();selectGardenZone(zone.id);});
+        element.addEventListener('dblclick',e=>{
+            e.preventDefault();
+            e.stopPropagation();
+            selectedGardenZoneId=zone.id;
+            openSelectedGardenProgram();
+        });
+        canvas.appendChild(element);
+    });
+    canvas.onclick=()=>{selectedGardenZoneId=null;renderGardenMap();renderGardenInspector();};
+    renderGardenInspector();
+}
+
+function selectGardenZone(id){
+    selectedGardenZoneId=Number(id);
+    renderGardenMap();
+    renderGardenInspector();
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    if(zone)setGardenStatus(`Zone „${zone.name}“ ausgewählt – Einstellungen oberhalb der Karte`,'okmsg');
+}
+
+function gardenLinkedProgram(zone){
+    if(!zone || Number(zone.programIndex)<0)return null;
+    return programCache.find(p=>Number(p.index)===Number(zone.programIndex))||null;
+}
+
+function gardenZoneHistoryEntries(zone){
+    if(!zone)return [];
+
+    const program=gardenLinkedProgram(zone);
+
+    return (historyCache||[]).filter(entry=>{
+        const linkedProgram=
+            program &&
+            Number(entry.programId)===Number(program.id);
+
+        const manualSameValve=
+            Number(entry.programId)===0 &&
+            Number(entry.valve)===Number(zone.valve);
+
+        return linkedProgram || manualSameValve;
+    });
+}
+
+function gardenZoneIsRunning(zone){
+    if(!zone || !lastStatus)return false;
+
+    const program=gardenLinkedProgram(zone);
+
+    const programRun=
+        !!program &&
+        lastStatus.running &&
+        Number(lastStatus.programId)===Number(program.id);
+
+    const manualRun=
+        !!lastStatus.manualRun &&
+        Number(lastStatus.manualValve)===Number(zone.valve);
+
+    return programRun || manualRun;
+}
+
+function gardenCurrentRunText(zone){
+    if(!gardenZoneIsRunning(zone))return '--';
+
+    if(lastStatus.manualRun &&
+       Number(lastStatus.manualValve)===Number(zone.valve)){
+        const elapsed=Math.max(
+            0,
+            Number(lastStatus.currentRunSeconds||0)
+        );
+
+        const minutes=Math.floor(elapsed/60);
+        const seconds=elapsed%60;
+
+        return `MANUELL · ${minutes}:${String(seconds).padStart(2,'0')}`;
+    }
+
+    const remaining=Math.max(
+        0,
+        Number(lastStatus.remaining||0)
+    );
+
+    const minutes=Math.floor(remaining/60);
+    const seconds=remaining%60;
+
+    return `LÄUFT · Rest ${minutes}:${String(seconds).padStart(2,'0')}`;
+}
+
+function gardenRunStartTimestamp(stopEntry,entries){
+    if(!stopEntry)return 0;
+
+    const stopTime=Number(stopEntry.timestamp||0);
+    const actualSeconds=Math.max(0,Number(stopEntry.actualSeconds||0));
+
+    if(stopTime>0 && actualSeconds>0){
+        return stopTime-actualSeconds;
+    }
+
+    const candidates=(entries||[])
+        .filter(entry=>
+            entry.event==='start' &&
+            Number(entry.programId)===Number(stopEntry.programId) &&
+            Number(entry.valve)===Number(stopEntry.valve) &&
+            Number(entry.timestamp||0)<=stopTime
+        )
+        .sort((a,b)=>Number(b.timestamp||0)-Number(a.timestamp||0));
+
+    return candidates.length
+        ? Number(candidates[0].timestamp||0)
+        : stopTime;
+}
+
+function renderGardenZoneStatistics(){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    if(!zone)return;
+
+    const program=gardenLinkedProgram(zone);
+    const allEntries=gardenZoneHistoryEntries(zone);
+    const completed=allEntries.filter(entry=>entry.event==='stop');
+
+    const historyLiters=completed.reduce(
+        (sum,entry)=>sum+Number(entry.liters||0),
+        0
+    );
+
+    const historyCost=completed.reduce(
+        (sum,entry)=>sum+Number(entry.costEuro||0),
+        0
+    );
+
+    const newestCompleted=completed
+        .slice()
+        .sort((a,b)=>Number(b.timestamp||0)-Number(a.timestamp||0))[0];
+
+    const running=gardenZoneIsRunning(zone);
+
+    const liveLiters=running
+        ? Number(lastStatus.waterCurrentRun||0)
+        : 0;
+
+    const liveCost=running
+        ? Number(lastStatus.waterCurrentCost||0)
+        : 0;
+
+    const setText=(id,value)=>{
+        const el=document.getElementById(id);
+        if(el)el.textContent=value;
+    };
+
+    const newestStartTimestamp=
+        newestCompleted
+            ? gardenRunStartTimestamp(
+                newestCompleted,
+                allEntries
+              )
+            : 0;
+
+    setText(
+        'gardenLastWatering',
+        running
+            ? (
+                lastStatus.manualRun
+                    ? 'MANUELL · LÄUFT JETZT'
+                    : 'LÄUFT JETZT'
+              )
+            : (
+                newestCompleted
+                    ? historyTimestamp(newestStartTimestamp)
+                    : '--'
+              )
+    );
+
+    setText(
+        'gardenRunCount',
+        running
+            ? `${completed.length} · +1 läuft`
+            : String(completed.length)
+    );
+
+    setText(
+        'gardenCurrentRun',
+        gardenCurrentRunText(zone)
+    );
+
+    setText(
+        'gardenLiters',
+        (historyLiters+liveLiters)
+            .toFixed(1)
+            .replace('.',',')+' l'
+    );
+
+    setText(
+        'gardenCost',
+        (historyCost+liveCost)
+            .toFixed(2)
+            .replace('.',',')+' €'
+    );
+
+    const info=document.getElementById('gardenZoneHistory');
+    if(!info)return;
+
+    if(!program){
+        info.textContent='Für Historie bitte ein Programm zuordnen.';
+        return;
+    }
+
+    if(!allEntries.length){
+        info.textContent=`${gardenProgramLabel(zone.programIndex)} · Noch keine passenden Historieneinträge in den geladenen Daten.`;
+        return;
+    }
+
+    const skipped=allEntries.filter(entry=>entry.event==='skipped').length;
+    const started=allEntries.filter(entry=>entry.event==='start').length;
+
+    if(gardenZoneIsRunning(zone)){
+        const source=
+            lastStatus.manualRun
+                ? `Manuell · Ventil ${Number(zone.valve)+1}`
+                : gardenProgramLabel(zone.programIndex);
+
+        info.textContent=
+            `${source} · `+
+            `LÄUFT JETZT · `+
+            `${Number(lastStatus.waterCurrentRun||0).toFixed(1).replace('.',',')} l · `+
+            `${Number(lastStatus.waterCurrentCost||0).toFixed(2).replace('.',',')} €`;
+    }else{
+        info.textContent=
+            `${gardenProgramLabel(zone.programIndex)} · `+
+            `${started} Start(s), ${completed.length} Abschluss/Abbruch, `+
+            `${skipped} übersprungen`;
+    }
+}
+
+function renderGardenInspector(){
+    const inspector=document.getElementById('gardenInspector');
+    if(!inspector)return;
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    inspector.classList.toggle('open',!!zone);
+    if(!zone)return;
+    renderGardenProfileSelector();
+    renderGardenProgramSelector();
+    document.getElementById('gardenInspectorTitle').textContent=zone.name;
+    document.getElementById('gardenZoneName').value=zone.name;
+    document.getElementById('gardenZoneProfile').value=String(zone.profileId);
+    document.getElementById('gardenZoneValve').value=String(zone.valve);
+    document.getElementById('gardenZoneProgram').value=String(zone.programIndex??-1);
+    document.getElementById('gardenZoneColor').value=zone.color;
+    renderGardenZoneStatistics();
+}
+
+function updateSelectedGardenZoneFromInspector(showConfirmation=false){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    if(!zone)return;
+    zone.name=document.getElementById('gardenZoneName').value||'Zone';
+    zone.profileId=Number(document.getElementById('gardenZoneProfile').value||0);
+    zone.valve=Number(document.getElementById('gardenZoneValve').value||0);
+    zone.programIndex=Number(document.getElementById('gardenZoneProgram').value??-1);
+    zone.color=document.getElementById('gardenZoneColor').value||'#2d7645';
+
+    const canvas=document.getElementById('gardenCanvas');
+    const element=canvas?.querySelector(`[data-zone-id="${zone.id}"]`);
+    if(element){
+        element.style.background=zone.color+'cc';
+        const header=element.querySelector('.gardenZoneHeader');
+        const meta=element.querySelector('.gardenZoneMeta');
+        if(header)header.textContent=zone.name;
+        if(meta)meta.textContent=`${gardenProfileName(zone.profileId)} · Ventil ${Number(zone.valve)+1}${gardenProgramLabel(zone.programIndex)?' · '+gardenProgramLabel(zone.programIndex):''}${gardenValveIsOpen(zone.valve)?' · Bewässerung läuft':''}`;
+    }
+
+    document.getElementById('gardenInspectorTitle').textContent=zone.name;
+    renderGardenZoneStatistics();
+    void saveGardenMap();
+    if(showConfirmation)setGardenStatus(`Zone „${zone.name}“ aktualisiert`,'okmsg');
+}
+
+async function saveSelectedGardenZone(){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    if(!zone){
+        setGardenStatus('Bitte zuerst eine Zone auswählen','errmsg');
+        return;
+    }
+    updateSelectedGardenZoneFromInspector(false);
+    const ok=await saveGardenMap();
+    if(ok)setGardenStatus(`Zone „${zone.name}“ im ESP gespeichert`,'okmsg');
+}
+
+function deleteSelectedGardenZone(){
+    if(selectedGardenZoneId===null)return;
+    if(!confirm('Ausgewählte Zone löschen?'))return;
+    gardenZones=gardenZones.filter(z=>z.id!==selectedGardenZoneId);
+    selectedGardenZoneId=null;renderGardenMap();void saveGardenMap();
+}
+
+function gardenZonePointerDown(event){
+    if(event.button!==undefined&&event.button!==0)return;
+    const element=event.currentTarget,id=Number(element.dataset.zoneId),zone=gardenZones.find(z=>z.id===id);
+    if(!zone)return;
+    selectedGardenZoneId=id;renderGardenInspector();
+    const canvas=document.getElementById('gardenCanvas'),canvasRect=canvas.getBoundingClientRect();
+    const resize=event.target.classList.contains('gardenResizeHandle');
+    gardenInteraction={id,mode:resize?'resize':'move',startX:event.clientX,startY:event.clientY,canvasWidth:canvasRect.width,canvasHeight:canvasRect.height,x:zone.x,y:zone.y,w:zone.w,h:zone.h};
+    element.setPointerCapture?.(event.pointerId);
+    window.addEventListener('pointermove',gardenZonePointerMove,{passive:false});
+    window.addEventListener('pointerup',gardenZonePointerUp,{once:true});
+    event.preventDefault();event.stopPropagation();
+}
+
+function gardenZonePointerMove(event){
+    if(!gardenInteraction)return;
+    event.preventDefault();
+    const state=gardenInteraction,zone=gardenZones.find(z=>z.id===state.id);
+    if(!zone)return;
+    const dx=(event.clientX-state.startX)/state.canvasWidth*100,dy=(event.clientY-state.startY)/state.canvasHeight*100;
+    if(state.mode==='resize'){
+        zone.w=Math.max(8,Math.min(100-state.x,state.w+dx));
+        zone.h=Math.max(8,Math.min(100-state.y,state.h+dy));
+    }else{
+        zone.x=Math.max(0,Math.min(100-zone.w,state.x+dx));
+        zone.y=Math.max(0,Math.min(100-zone.h,state.y+dy));
+    }
+    renderGardenMap();
+}
+
+function gardenZonePointerUp(){
+    if(!gardenInteraction)return;
+    gardenInteraction=null;
+    window.removeEventListener('pointermove',gardenZonePointerMove);
+    saveGardenMap();
+}
+
 async function loadAll(){
     /*
      * Bewusst nacheinander statt parallel:
@@ -1821,7 +2473,7 @@ async function loadAll(){
     await loadStatus();
     await loadLog();
     await loadHistory();
-}bindSettingsForms();loadWeekGridStep();restoreSelectedPage();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
+}bindSettingsForms();loadWeekGridStep();void loadGardenMap();restoreSelectedPage();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
 </script>
 </body></html>
 )HTML";
@@ -1838,7 +2490,8 @@ void WebManager::begin(Scheduler& scheduler,
                        WaterManager& waterManager,
                        SeasonManager& seasonManager,
                        BackupManager& backupManager,
-                       HistoryManager& historyManager)
+                       HistoryManager& historyManager,
+                       GardenManager& gardenManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
@@ -1852,12 +2505,85 @@ void WebManager::begin(Scheduler& scheduler,
     seasonManager_ = &seasonManager;
     backupManager_ = &backupManager;
     historyManager_ = &historyManager;
+    gardenManager_ = &gardenManager;
     configureRoutes();
     Serial.println("WebManager initialisiert");
 }
 
+void WebManager::updateManualValveTracking()
+{
+    if (valveManager_ == nullptr || runtimeManager_ == nullptr)
+    {
+        return;
+    }
+
+    if (!valveObservationInitialized_)
+    {
+        for (uint8_t i = 0; i < AppConfig::DISPLAYED_VALVE_COUNT && i < 2; ++i)
+        {
+            lastObservedValveOpen_[i] = valveManager_->channel(i).assumedOpen;
+        }
+        valveObservationInitialized_ = true;
+        return;
+    }
+
+    for (uint8_t i = 0; i < AppConfig::DISPLAYED_VALVE_COUNT && i < 2; ++i)
+    {
+        const bool openNow = valveManager_->channel(i).assumedOpen;
+        const bool openBefore = lastObservedValveOpen_[i];
+
+        if (openNow == openBefore)
+        {
+            continue;
+        }
+
+        lastObservedValveOpen_[i] = openNow;
+
+        if (openNow)
+        {
+            if (runtimeManager_->isRunning())
+            {
+                continue;
+            }
+
+            manualValveStartedAtMs_[i] = millis();
+            manualValveRunActive_[i] = true;
+
+            if (historyManager_ != nullptr && historyManager_->isReady())
+            {
+                historyManager_->recordStart(0, i, 0, 0, false);
+            }
+        }
+        else if (manualValveRunActive_[i])
+        {
+            const uint32_t actualSeconds =
+                static_cast<uint32_t>(millis() - manualValveStartedAtMs_[i]) / 1000UL;
+
+            if (actualSeconds > 0)
+            {
+                if (waterManager_ != nullptr)
+                {
+                    waterManager_->addRuntime(i, actualSeconds);
+                }
+
+                if (historyManager_ != nullptr && historyManager_->isReady())
+                {
+                    historyManager_->recordStop(
+                        0, i, 0, 0, actualSeconds, false, false
+                    );
+                }
+            }
+
+            manualValveRunActive_[i] = false;
+            manualValveStartedAtMs_[i] = 0;
+        }
+    }
+}
+
 void WebManager::update()
 {
+    updateManualValveTracking();
+
     if (!timeManager_)
     {
         return;
@@ -1932,6 +2658,9 @@ void WebManager::configureRoutes()
         handleBackupRestore();
     });
     server_.on("/api/history", HTTP_GET, [this]() { handleHistory(); });
+    server_.on("/api/garden", HTTP_GET, [this]() { handleGarden(); });
+    server_.on("/api/garden/save", HTTP_POST, [this]() { handleGardenSave(); });
+    server_.on("/api/garden/reset", HTTP_POST, [this]() { handleGardenReset(); });
     server_.on("/api/programs", HTTP_GET, [this]() { handlePrograms(); });
     server_.on("/api/program/create", HTTP_POST, [this]() { handleCreateProgram(); });
     server_.on("/api/program/update", HTTP_POST, [this]() { handleUpdateProgram(); });
@@ -2184,20 +2913,23 @@ void WebManager::handleStatus()
 
     float currentRunLiters = 0.0f;
     float currentRunCost = 0.0f;
+    bool manualRun = false;
+    int8_t manualValve = -1;
+    uint32_t currentRunSeconds = 0;
 
     if (runtimeManager_->isRunning())
     {
         const uint8_t runningValve =
             runtimeManager_->runningValveIndex();
 
-        const uint32_t elapsedSeconds =
+        currentRunSeconds =
             runtimeManager_->durationSeconds() -
             runtimeManager_->remainingSeconds();
 
         currentRunLiters =
             waterManager_->valveFlowRate(runningValve) *
             (
-                static_cast<float>(elapsedSeconds) /
+                static_cast<float>(currentRunSeconds) /
                 60.0f
             );
 
@@ -2206,11 +2938,51 @@ void WebManager::handleStatus()
             waterManager_->waterPrice() /
             1000.0f;
     }
+    else
+    {
+        for (uint8_t i = 0;
+             i < AppConfig::DISPLAYED_VALVE_COUNT;
+             ++i)
+        {
+            if (!manualValveRunActive_[i])
+            {
+                continue;
+            }
+
+            manualRun = true;
+            manualValve = static_cast<int8_t>(i);
+
+            currentRunSeconds =
+                static_cast<uint32_t>(
+                    millis() - manualValveStartedAtMs_[i]
+                ) / 1000UL;
+
+            currentRunLiters =
+                waterManager_->valveFlowRate(i) *
+                (
+                    static_cast<float>(currentRunSeconds) /
+                    60.0f
+                );
+
+            currentRunCost =
+                currentRunLiters *
+                waterManager_->waterPrice() /
+                1000.0f;
+
+            break;
+        }
+    }
 
     body += F(",\"waterCurrentRun\":");
     body += String(currentRunLiters, 3);
     body += F(",\"waterCurrentCost\":");
     body += String(currentRunCost, 4);
+    body += F(",\"currentRunSeconds\":");
+    body += String(currentRunSeconds);
+    body += F(",\"manualRun\":");
+    body += manualRun ? F("true") : F("false");
+    body += F(",\"manualValve\":");
+    body += String(manualValve);
     body += F(",\"valves\":[");
 
     for (uint8_t i = 0; i < AppConfig::DISPLAYED_VALVE_COUNT; ++i)
@@ -3058,6 +3830,112 @@ void WebManager::handleHistory()
     body += F("]}");
 
     sendJson(200, body);
+}
+
+void WebManager::handleGarden()
+{
+    if (gardenManager_ == nullptr ||
+        !gardenManager_->isReady())
+    {
+        sendJson(
+            503,
+            "{\"error\":\"GardenManager nicht bereit\"}"
+        );
+        return;
+    }
+
+    sendJson(
+        200,
+        gardenManager_->exportJson()
+    );
+}
+
+void WebManager::handleGardenSave()
+{
+    if (gardenManager_ == nullptr ||
+        !gardenManager_->isReady())
+    {
+        sendJson(
+            503,
+            "{\"error\":\"GardenManager nicht bereit\"}"
+        );
+        return;
+    }
+
+    if (!server_.hasArg("plain"))
+    {
+        sendJson(
+            400,
+            "{\"error\":\"Keine JSON-Daten empfangen\"}"
+        );
+        return;
+    }
+
+    const String body =
+        server_.arg("plain");
+
+    if (body.length() == 0 ||
+        body.length() > 16000)
+    {
+        sendJson(
+            400,
+            "{\"error\":\"Gartenkarte leer oder zu groß\"}"
+        );
+        return;
+    }
+
+    String message;
+
+    if (!gardenManager_->
+            importJson(
+                body,
+                message
+            ))
+    {
+        sendJson(
+            400,
+            String("{\"error\":\"") +
+            jsonEscape(message) +
+            "\"}"
+        );
+        return;
+    }
+
+    sendJson(
+        200,
+        String("{\"ok\":true,\"zones\":") +
+        String(gardenManager_->count()) +
+        ",\"message\":\"" +
+        jsonEscape(message) +
+        "\"}"
+    );
+}
+
+void WebManager::handleGardenReset()
+{
+    if (gardenManager_ == nullptr ||
+        !gardenManager_->isReady())
+    {
+        sendJson(
+            503,
+            "{\"error\":\"GardenManager nicht bereit\"}"
+        );
+        return;
+    }
+
+    if (!gardenManager_->reset())
+    {
+        sendJson(
+            500,
+            "{\"error\":\"Gartenkarte konnte nicht zurückgesetzt werden\"}"
+        );
+        return;
+    }
+
+    sendJson(
+        200,
+        "{\"ok\":true,\"zones\":0}"
+    );
 }
 
 void WebManager::handleBackupRestore()

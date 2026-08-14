@@ -15,6 +15,7 @@ class WaterManager;
 class SeasonManager;
 class BackupManager;
 class HistoryManager;
+class GardenManager;
 
 class WebManager
 {
@@ -30,7 +31,8 @@ public:
                WaterManager& waterManager,
                SeasonManager& seasonManager,
                BackupManager& backupManager,
-               HistoryManager& historyManager);
+               HistoryManager& historyManager,
+               GardenManager& gardenManager);
     void update();
     bool isStarted() const;
 
@@ -48,14 +50,21 @@ private:
     SeasonManager* seasonManager_ = nullptr;
     BackupManager* backupManager_ = nullptr;
     HistoryManager* historyManager_ = nullptr;
+    GardenManager* gardenManager_ = nullptr;
     bool started_ = false;
     bool otaStarted_ = false;
     bool wifiWasConnected_ = false;
     uint32_t restartRequestedAtMs_ = 0;
 
+    uint32_t manualValveStartedAtMs_[2] = {0, 0};
+    bool manualValveRunActive_[2] = {false, false};
+    bool valveObservationInitialized_ = false;
+    bool lastObservedValveOpen_[2] = {false, false};
+
     void startServices();
     void configureRoutes();
     void configureOta();
+    void updateManualValveTracking();
 
     void handleRoot();
     void handleStatus();
@@ -83,6 +92,9 @@ private:
     void handleProfilesReset();
     void handleBackupRestore();
     void handleHistory();
+    void handleGarden();
+    void handleGardenSave();
+    void handleGardenReset();
     void handleNotFound();
 
     void sendJson(int code, const String& body);
