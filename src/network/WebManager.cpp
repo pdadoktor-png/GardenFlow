@@ -103,7 +103,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 .gardenZoneMeta{padding:5px 9px;font-size:.76rem;background:#0004}
 .gardenResizeHandle{position:absolute;right:2px;bottom:2px;width:16px;height:16px;border-radius:4px;background:#fff7;cursor:nwse-resize}
 .gardenInspector{margin-top:12px;display:none}.gardenInspector.open{display:block}
-.gardenInspectorGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.gardenStats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-top:12px}.gardenStat{padding:10px 12px;border:1px solid #304237;border-radius:10px;background:#111b16}.gardenStatLabel{font-size:.76rem;color:#9fb2a5}.gardenStatValue{font-size:1.05rem;font-weight:850;margin-top:3px}.gardenZoneHistory{margin-top:10px;border-top:1px solid #304237;padding-top:10px}
+.gardenInspectorGrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}.gardenStats{display:grid;grid-template-columns:repeat(auto-fit,minmax(145px,1fr));gap:9px;margin-top:12px}.gardenStat{padding:10px 12px;border:1px solid #304237;border-radius:10px;background:#111b16}.gardenStatLabel{font-size:.76rem;color:#9fb2a5}.gardenStatValue{font-size:1.05rem;font-weight:850;margin-top:3px}.gardenZoneHistory{margin-top:10px;border-top:1px solid #304237;padding-top:10px}.gardenPolygonToolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-top:10px}.gardenVertexHandle{position:absolute;width:16px;height:16px;margin-left:-8px;margin-top:-8px;border:2px solid #fff;border-radius:50%;background:#7fda98;box-shadow:0 2px 8px #0008;cursor:grab;z-index:20;touch-action:none}.gardenVertexHandle.dragging{cursor:grabbing;transform:scale(1.18)}.gardenVertexHandle.activeVertex{background:#ffd36b;border-color:#fff;transform:scale(1.18)}.gardenPolygonToolbar select{padding:7px 9px;border-radius:8px;background:#152219;color:#e8f2eb;border:1px solid #3d5545}.gardenEdgePlus{position:absolute;width:22px;height:22px;margin-left:-11px;margin-top:-11px;border:3px solid #fff;border-radius:50%;background:#16844a;color:#fff;display:flex;align-items:center;justify-content:center;font-size:18px;line-height:18px;font-weight:900;cursor:pointer;z-index:25;box-shadow:0 2px 8px #000a;touch-action:none;pointer-events:auto;padding:0}.gardenPolygonEditing .gardenZone.selected{outline:3px dashed #d9f5df}
 .gardenEmpty{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#9fb2a5;font-size:1.05rem;pointer-events:none}
 .gardenStatus{min-height:1.4em;margin-top:8px;padding:7px 10px;border-radius:8px;color:#9fb2a5}.gardenStatus.okmsg{color:#7fda98;background:#173321}.gardenStatus.errmsg{color:#ff9e98;background:#3a1d1d}
 @media(max-width:820px){.gardenCanvas{min-width:680px}.gardenToolbar button{flex:1}}
@@ -298,6 +298,17 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
       <label class="field"><span>Programm</span><select id="gardenZoneProgram" onchange="updateSelectedGardenZoneFromInspector(true)"></select></label>
       <label class="field"><span>Programm öffnen</span><button class="secondary" onclick="openSelectedGardenProgram()">Programmeditor öffnen</button></label>
       <label class="field"><span>Farbe</span><input id="gardenZoneColor" type="color" value="#2d7645" oninput="updateSelectedGardenZoneFromInspector(false)" onchange="updateSelectedGardenZoneFromInspector(true)"></label>
+    </div>
+    <div class="gardenPolygonToolbar">
+      <button id="gardenPolygonEditButton" class="secondary" onclick="toggleGardenPolygonEdit()">Polygon bearbeiten</button>
+      <button id="gardenDeleteVertexButton" class="secondary" onclick="gardenDeleteVertex()" disabled>Eckpunkt löschen</button>
+      <select id="gardenRoundStrength" title="Rundungsgröße">
+        <option value="0.15">Rundung klein</option>
+        <option value="0.25" selected>Rundung mittel</option>
+        <option value="0.35">Rundung groß</option>
+      </select>
+      <button id="gardenRoundVertexButton" class="secondary" onclick="gardenRoundSelectedVertex()" disabled>Ecke abrunden</button>
+      <span id="gardenPolygonInfo" class="muted">Eckpunkte können im Bearbeitungsmodus verschoben werden.</span>
     </div>
     <div class="gardenStats">
       <div class="gardenStat"><div class="gardenStatLabel">Letzte Bewässerung</div><div id="gardenLastWatering" class="gardenStatValue">--</div></div>
@@ -1900,6 +1911,9 @@ function downloadHistoryJson(){
 let gardenZones=[];
 let selectedGardenZoneId=null;
 let gardenInteraction=null;
+let gardenPolygonEditMode=false;
+let gardenVertexInteraction=null;
+let gardenSelectedVertex=-1;
 
 function gardenMapStorageKey(){return 'gardenflowGardenMapV1';}
 
@@ -1913,6 +1927,13 @@ async function loadGardenMap(){
             profileId:Number(zone.profile||0),
             valve:Number(zone.valve||0),
             programIndex:Number(zone.program??-1),
+            shape:String(zone.shape||'polygon'),
+            points:Array.isArray(zone.points)
+                ? zone.points.map(p=>[
+                    Number(p?.[0]??0),
+                    Number(p?.[1]??0)
+                  ])
+                : [],
             color:String(zone.color||'#2d7645'),
             x:Number(zone.x??10),
             y:Number(zone.y??10),
@@ -1934,6 +1955,410 @@ async function loadGardenMap(){
     if(loadedFromEsp)setGardenStatus(`Gartenkarte vom ESP geladen · ${gardenZones.length} Zone(n)`,'okmsg');
 }
 
+function gardenEnsurePolygon(zone){
+    if(Array.isArray(zone.points) && zone.points.length>=3){
+        return;
+    }
+
+    const x=Number(zone.x||0);
+    const y=Number(zone.y||0);
+    const w=Number(zone.w||24);
+    const h=Number(zone.h||18);
+
+    zone.points=[
+        [x,y],
+        [x+w,y],
+        [x+w,y+h],
+        [x,y+h]
+    ];
+    zone.shape='polygon';
+}
+
+function gardenUpdateBoundsFromPoints(zone){
+    gardenEnsurePolygon(zone);
+
+    const xs=zone.points.map(p=>Number(p[0]));
+    const ys=zone.points.map(p=>Number(p[1]));
+
+    zone.x=Math.min(...xs);
+    zone.y=Math.min(...ys);
+    zone.w=Math.max(8,Math.max(...xs)-zone.x);
+    zone.h=Math.max(8,Math.max(...ys)-zone.y);
+}
+
+function gardenSyncPolygonFromRect(zone){
+    const x=Number(zone.x||0);
+    const y=Number(zone.y||0);
+    const w=Number(zone.w||8);
+    const h=Number(zone.h||8);
+
+    zone.points=[
+        [x,y],
+        [x+w,y],
+        [x+w,y+h],
+        [x,y+h]
+    ];
+    zone.shape='polygon';
+}
+
+function gardenClonePoints(zone){
+    gardenEnsurePolygon(zone);
+    return zone.points.map(p=>[
+        Number(p[0]),
+        Number(p[1])
+    ]);
+}
+
+function gardenTranslatePolygon(zone,originalPoints,dx,dy){
+    zone.points=originalPoints.map(point=>[
+        Math.max(0,Math.min(100,Number(point[0])+dx)),
+        Math.max(0,Math.min(100,Number(point[1])+dy))
+    ]);
+    gardenUpdateBoundsFromPoints(zone);
+}
+
+function gardenScalePolygon(zone,originalPoints,oldBounds,newBounds){
+    const oldW=Math.max(0.001,Number(oldBounds.w));
+    const oldH=Math.max(0.001,Number(oldBounds.h));
+    const sx=Math.max(0.001,Number(newBounds.w))/oldW;
+    const sy=Math.max(0.001,Number(newBounds.h))/oldH;
+
+    zone.points=originalPoints.map(point=>[
+        Math.max(
+            0,
+            Math.min(
+                100,
+                Number(oldBounds.x)+
+                (Number(point[0])-Number(oldBounds.x))*sx
+            )
+        ),
+        Math.max(
+            0,
+            Math.min(
+                100,
+                Number(oldBounds.y)+
+                (Number(point[1])-Number(oldBounds.y))*sy
+            )
+        )
+    ]);
+
+    gardenUpdateBoundsFromPoints(zone);
+}
+
+function toggleGardenPolygonEdit(){
+    if(selectedGardenZoneId===null){
+        setGardenStatus('Bitte zuerst eine Zone auswählen','errmsg');
+        return;
+    }
+
+    gardenPolygonEditMode=!gardenPolygonEditMode;
+    gardenSelectedVertex=-1;
+    renderGardenMap();
+    renderGardenInspector();
+
+    setGardenStatus(
+        gardenPolygonEditMode
+            ? 'Polygon-Bearbeitung aktiv · Eckpunkte ziehen'
+            : 'Polygon-Bearbeitung beendet',
+        'okmsg'
+    );
+}
+
+function gardenAddVertex(zoneId,edgeIndex,event){
+    if(event){
+        event.preventDefault();
+        event.stopPropagation();
+    }
+
+    const zone=gardenZones.find(z=>z.id===Number(zoneId));
+    if(!zone)return;
+
+    gardenEnsurePolygon(zone);
+
+    if(zone.points.length>=16){
+        setGardenStatus('Maximal 16 Eckpunkte pro Zone','errmsg');
+        return;
+    }
+
+    const a=zone.points[edgeIndex];
+    const b=zone.points[(edgeIndex+1)%zone.points.length];
+
+    zone.points.splice(edgeIndex+1,0,[
+        (Number(a[0])+Number(b[0]))/2,
+        (Number(a[1])+Number(b[1]))/2
+    ]);
+
+    gardenSelectedVertex=edgeIndex+1;
+    gardenUpdateBoundsFromPoints(zone);
+    renderGardenMap();
+    void saveGardenMap();
+
+    setGardenStatus('Eckpunkt hinzugefügt','okmsg');
+}
+
+function gardenDeleteVertex(){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+
+    if(!zone || gardenSelectedVertex<0){
+        setGardenStatus('Bitte zuerst einen Eckpunkt auswählen','errmsg');
+        return;
+    }
+
+    gardenEnsurePolygon(zone);
+
+    if(zone.points.length<=3){
+        setGardenStatus('Mindestens 3 Eckpunkte erforderlich','errmsg');
+        return;
+    }
+
+    zone.points.splice(gardenSelectedVertex,1);
+    gardenSelectedVertex=-1;
+    gardenUpdateBoundsFromPoints(zone);
+    renderGardenMap();
+    void saveGardenMap();
+
+    setGardenStatus('Eckpunkt gelöscht','okmsg');
+}
+
+function gardenCoord(value){
+    const n=Number(value);
+    if(!Number.isFinite(n))return 0;
+    return Math.round(
+        Math.max(0,Math.min(100,n))*1000
+    )/1000;
+}
+
+async function gardenRoundSelectedVertex(){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+
+    if(!zone || gardenSelectedVertex<0){
+        setGardenStatus('Bitte zuerst einen Eckpunkt auswählen','errmsg');
+        return;
+    }
+
+    gardenEnsurePolygon(zone);
+
+    const count=zone.points.length;
+
+    if(count+4>16){
+        setGardenStatus('Für diese Rundung sind zu viele Eckpunkte vorhanden','errmsg');
+        return;
+    }
+
+    const index=gardenSelectedVertex;
+    const prev=zone.points[(index-1+count)%count];
+    const corner=zone.points[index];
+    const next=zone.points[(index+1)%count];
+
+    const strength=Math.max(
+        0.05,
+        Math.min(
+            0.45,
+            Number(document.getElementById('gardenRoundStrength')?.value||0.25)
+        )
+    );
+
+    const start=[
+        Number(corner[0])+(Number(prev[0])-Number(corner[0]))*strength,
+        Number(corner[1])+(Number(prev[1])-Number(corner[1]))*strength
+    ];
+
+    const end=[
+        Number(corner[0])+(Number(next[0])-Number(corner[0]))*strength,
+        Number(corner[1])+(Number(next[1])-Number(corner[1]))*strength
+    ];
+
+    const curve=[];
+
+    for(let step=0;step<5;step++){
+        const t=step/4;
+        const u=1-t;
+
+        curve.push([
+            gardenCoord(
+                u*u*start[0]+
+                2*u*t*Number(corner[0])+
+                t*t*end[0]
+            ),
+            gardenCoord(
+                u*u*start[1]+
+                2*u*t*Number(corner[1])+
+                t*t*end[1]
+            )
+        ]);
+    }
+
+    zone.points.splice(index,1,...curve);
+    gardenSelectedVertex=index+2;
+    gardenUpdateBoundsFromPoints(zone);
+    renderGardenMap();
+
+    const ok=await saveGardenMap();
+
+    if(ok){
+        setGardenStatus(
+            `Ecke abgerundet · ${zone.points.length} Eckpunkte · gespeichert`,
+            'okmsg'
+        );
+    }
+}
+
+function renderGardenEdgePluses(){
+    const canvas=document.getElementById('gardenCanvas');
+    if(!canvas)return;
+
+    canvas.querySelectorAll('.gardenEdgePlus').forEach(e=>e.remove());
+
+    if(!gardenPolygonEditMode || selectedGardenZoneId===null)return;
+
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    if(!zone)return;
+
+    gardenEnsurePolygon(zone);
+
+    zone.points.forEach((a,index)=>{
+        const b=zone.points[(index+1)%zone.points.length];
+
+        const plus=document.createElement('button');
+        plus.type='button';
+        plus.className='gardenEdgePlus';
+        plus.textContent='+';
+        plus.title='Eckpunkt hinzufügen';
+        plus.style.left=`${(Number(a[0])+Number(b[0]))/2}%`;
+        plus.style.top=`${(Number(a[1])+Number(b[1]))/2}%`;
+
+        plus.addEventListener('pointerdown',event=>{
+            event.preventDefault();
+            event.stopPropagation();
+        });
+
+        plus.addEventListener('click',event=>{
+            gardenAddVertex(zone.id,index,event);
+        });
+
+        canvas.appendChild(plus);
+    });
+}
+
+function renderGardenVertexHandles(){
+    const canvas=document.getElementById('gardenCanvas');
+    if(!canvas)return;
+
+    canvas.querySelectorAll('.gardenVertexHandle').forEach(handle=>handle.remove());
+    canvas.classList.toggle('gardenPolygonEditing',gardenPolygonEditMode);
+
+    if(!gardenPolygonEditMode || selectedGardenZoneId===null)return;
+
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    if(!zone)return;
+
+    gardenEnsurePolygon(zone);
+
+    zone.points.forEach((point,index)=>{
+        const handle=document.createElement('div');
+        handle.className='gardenVertexHandle'+(index===gardenSelectedVertex?' activeVertex':'');
+        handle.dataset.zoneId=String(zone.id);
+        handle.dataset.pointIndex=String(index);
+        handle.style.left=`${Number(point[0])}%`;
+        handle.style.top=`${Number(point[1])}%`;
+        handle.title=`Eckpunkt ${index+1}`;
+        handle.addEventListener('pointerdown',gardenVertexPointerDown);
+        handle.addEventListener('click',event=>{
+            event.preventDefault();
+            event.stopPropagation();
+            gardenSelectedVertex=index;
+            renderGardenMap();
+        });
+        canvas.appendChild(handle);
+    });
+}
+
+function gardenVertexPointerDown(event){
+    if(!gardenPolygonEditMode)return;
+
+    const handle=event.currentTarget;
+    const zoneId=Number(handle.dataset.zoneId);
+    const pointIndex=Number(handle.dataset.pointIndex);
+    const zone=gardenZones.find(z=>z.id===zoneId);
+    const canvas=document.getElementById('gardenCanvas');
+
+    if(!zone || !canvas || !zone.points?.[pointIndex])return;
+
+    gardenSelectedVertex=pointIndex;
+    const rect=canvas.getBoundingClientRect();
+
+    gardenVertexInteraction={
+        zoneId,
+        pointIndex,
+        canvasRect:rect
+    };
+
+    handle.classList.add('dragging');
+    handle.setPointerCapture?.(event.pointerId);
+
+    window.addEventListener(
+        'pointermove',
+        gardenVertexPointerMove,
+        {passive:false}
+    );
+
+    window.addEventListener(
+        'pointerup',
+        gardenVertexPointerUp,
+        {once:true}
+    );
+
+    event.preventDefault();
+    event.stopPropagation();
+}
+
+function gardenVertexPointerMove(event){
+    if(!gardenVertexInteraction)return;
+
+    event.preventDefault();
+
+    const state=gardenVertexInteraction;
+    const zone=gardenZones.find(z=>z.id===state.zoneId);
+    if(!zone)return;
+
+    const rect=state.canvasRect;
+    const x=((event.clientX-rect.left)/rect.width)*100;
+    const y=((event.clientY-rect.top)/rect.height)*100;
+
+    zone.points[state.pointIndex]=[
+        Math.max(0,Math.min(100,x)),
+        Math.max(0,Math.min(100,y))
+    ];
+
+    gardenUpdateBoundsFromPoints(zone);
+    renderGardenMap();
+}
+
+function gardenVertexPointerUp(){
+    if(!gardenVertexInteraction)return;
+
+    gardenVertexInteraction=null;
+    window.removeEventListener('pointermove',gardenVertexPointerMove);
+    void saveGardenMap();
+    renderGardenMap();
+}
+
+function gardenClipPath(zone){
+    gardenEnsurePolygon(zone);
+    gardenUpdateBoundsFromPoints(zone);
+
+    const w=Math.max(0.001,Number(zone.w||1));
+    const h=Math.max(0.001,Number(zone.h||1));
+
+    return 'polygon('+
+        zone.points.map(point=>{
+            const px=((Number(point[0])-zone.x)/w)*100;
+            const py=((Number(point[1])-zone.y)/h)*100;
+            return `${px}% ${py}%`;
+        }).join(',')+
+        ')';
+}
+
 function normalizeGardenZones(){
     gardenZones=gardenZones.map((zone,index)=>({
         id:Number(zone.id||Date.now()+index),
@@ -1941,12 +2366,27 @@ function normalizeGardenZones(){
         profileId:Number(zone.profileId||0),
         valve:Number(zone.valve||0),
         programIndex:Number(zone.programIndex??-1),
+        shape:'polygon',
+        points:Array.isArray(zone.points)
+            ? zone.points
+                .filter(p=>Array.isArray(p)&&p.length>=2)
+                .slice(0,16)
+                .map(p=>[
+                    Math.max(0,Math.min(100,Number(p[0]||0))),
+                    Math.max(0,Math.min(100,Number(p[1]||0)))
+                ])
+            : [],
         color:String(zone.color||'#2d7645'),
         x:Math.max(0,Math.min(90,Number(zone.x??10))),
         y:Math.max(0,Math.min(85,Number(zone.y??10))),
         w:Math.max(8,Math.min(80,Number(zone.w??24))),
         h:Math.max(8,Math.min(80,Number(zone.h??18)))
     }));
+
+    gardenZones.forEach(zone=>{
+        gardenEnsurePolygon(zone);
+        gardenUpdateBoundsFromPoints(zone);
+    });
 }
 
 async function saveGardenMap(){
@@ -1958,11 +2398,15 @@ async function saveGardenMap(){
             profile:Number(zone.profileId||0),
             valve:Number(zone.valve||0),
             program:Number(zone.programIndex??-1),
-            shape:'rect',
+            shape:'polygon',
             x:Number(zone.x||0),
             y:Number(zone.y||0),
             width:Number(zone.w||8),
             height:Number(zone.h||8),
+            points:(zone.points||[]).map(p=>[
+                gardenCoord(p[0]),
+                gardenCoord(p[1])
+            ]),
             color:String(zone.color||'#2d7645')
         }))
     };
@@ -2015,7 +2459,8 @@ async function resetGardenMap(){
 
 function addGardenZone(){
     const id=Date.now(),index=gardenZones.length;
-    gardenZones.push({id,name:`Zone ${index+1}`,profileId:0,valve:index%2,programIndex:-1,color:index%2?'#315f91':'#2d7645',x:8+(index%4)*8,y:8+(index%5)*7,w:24,h:18});
+    gardenZones.push({id,name:`Zone ${index+1}`,profileId:0,valve:index%2,programIndex:-1,shape:'polygon',points:[],color:index%2?'#315f91':'#2d7645',x:8+(index%4)*8,y:8+(index%5)*7,w:24,h:18});
+    gardenSyncPolygonFromRect(gardenZones[gardenZones.length-1]);
     selectedGardenZoneId=id;renderGardenMap();void saveGardenMap();
 }
 
@@ -2127,7 +2572,11 @@ function renderGardenMap(){
         const element=document.createElement('div');
         element.className='gardenZone'+(zone.id===selectedGardenZoneId?' selected':'')+(gardenValveIsOpen(zone.valve)?' watering':'');
         element.dataset.zoneId=String(zone.id);
+        gardenEnsurePolygon(zone);
+        gardenUpdateBoundsFromPoints(zone);
         element.style.left=`${zone.x}%`;element.style.top=`${zone.y}%`;element.style.width=`${zone.w}%`;element.style.height=`${zone.h}%`;element.style.background=zone.color+'cc';
+        element.style.clipPath=gardenClipPath(zone);
+        element.style.webkitClipPath=gardenClipPath(zone);
         const watering=gardenValveIsOpen(zone.valve);
         const programLabel=gardenProgramLabel(zone.programIndex);
         element.innerHTML=`<div class="gardenZoneHeader">${esc(zone.name)}</div><div class="gardenZoneMeta">${esc(gardenProfileName(zone.profileId))} · Ventil ${Number(zone.valve)+1}${programLabel?' · '+esc(programLabel):''}${watering?' · Bewässerung läuft':''}</div>${watering?'<div class="gardenWaterBadge">💧 AKTIV</div>':''}<div class="gardenResizeHandle"></div>`;
@@ -2141,12 +2590,19 @@ function renderGardenMap(){
         });
         canvas.appendChild(element);
     });
-    canvas.onclick=()=>{selectedGardenZoneId=null;renderGardenMap();renderGardenInspector();};
+    canvas.onclick=()=>{selectedGardenZoneId=null;gardenPolygonEditMode=false;gardenSelectedVertex=-1;renderGardenMap();renderGardenInspector();};
     renderGardenInspector();
+    renderGardenEdgePluses();
+    renderGardenVertexHandles();
 }
 
 function selectGardenZone(id){
-    selectedGardenZoneId=Number(id);
+    const nextId=Number(id);
+    if(selectedGardenZoneId!==nextId){
+        gardenPolygonEditMode=false;
+        gardenSelectedVertex=-1;
+    }
+    selectedGardenZoneId=nextId;
     renderGardenMap();
     renderGardenInspector();
     const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
@@ -2379,6 +2835,43 @@ function renderGardenInspector(){
     document.getElementById('gardenZoneValve').value=String(zone.valve);
     document.getElementById('gardenZoneProgram').value=String(zone.programIndex??-1);
     document.getElementById('gardenZoneColor').value=zone.color;
+
+    const polygonButton=document.getElementById('gardenPolygonEditButton');
+    if(polygonButton){
+        polygonButton.textContent=
+            gardenPolygonEditMode
+                ? 'Polygon fertig'
+                : 'Polygon bearbeiten';
+        polygonButton.className=
+            gardenPolygonEditMode
+                ? ''
+                : 'secondary';
+    }
+
+    const polygonInfo=document.getElementById('gardenPolygonInfo');
+    if(polygonInfo){
+        polygonInfo.textContent=
+            gardenPolygonEditMode
+                ? `${zone.points?.length||0} Eckpunkte · + Punkt · gelben Punkt abrunden`
+                : `${zone.points?.length||0} Eckpunkte`;
+    }
+
+    const deleteButton=document.getElementById('gardenDeleteVertexButton');
+    if(deleteButton){
+        deleteButton.disabled=
+            !gardenPolygonEditMode ||
+            gardenSelectedVertex<0 ||
+            (zone.points?.length||0)<=3;
+    }
+
+    const roundButton=document.getElementById('gardenRoundVertexButton');
+    if(roundButton){
+        roundButton.disabled=
+            !gardenPolygonEditMode ||
+            gardenSelectedVertex<0 ||
+            (zone.points?.length||0)+4>16;
+    }
+
     renderGardenZoneStatistics();
 }
 
@@ -2426,13 +2919,26 @@ function deleteSelectedGardenZone(){
 }
 
 function gardenZonePointerDown(event){
+    if(gardenPolygonEditMode)return;
     if(event.button!==undefined&&event.button!==0)return;
     const element=event.currentTarget,id=Number(element.dataset.zoneId),zone=gardenZones.find(z=>z.id===id);
     if(!zone)return;
     selectedGardenZoneId=id;renderGardenInspector();
     const canvas=document.getElementById('gardenCanvas'),canvasRect=canvas.getBoundingClientRect();
     const resize=event.target.classList.contains('gardenResizeHandle');
-    gardenInteraction={id,mode:resize?'resize':'move',startX:event.clientX,startY:event.clientY,canvasWidth:canvasRect.width,canvasHeight:canvasRect.height,x:zone.x,y:zone.y,w:zone.w,h:zone.h};
+    gardenInteraction={
+        id,
+        mode:resize?'resize':'move',
+        startX:event.clientX,
+        startY:event.clientY,
+        canvasWidth:canvasRect.width,
+        canvasHeight:canvasRect.height,
+        x:zone.x,
+        y:zone.y,
+        w:zone.w,
+        h:zone.h,
+        points:gardenClonePoints(zone)
+    };
     element.setPointerCapture?.(event.pointerId);
     window.addEventListener('pointermove',gardenZonePointerMove,{passive:false});
     window.addEventListener('pointerup',gardenZonePointerUp,{once:true});
@@ -2446,12 +2952,63 @@ function gardenZonePointerMove(event){
     if(!zone)return;
     const dx=(event.clientX-state.startX)/state.canvasWidth*100,dy=(event.clientY-state.startY)/state.canvasHeight*100;
     if(state.mode==='resize'){
-        zone.w=Math.max(8,Math.min(100-state.x,state.w+dx));
-        zone.h=Math.max(8,Math.min(100-state.y,state.h+dy));
+        const newW=Math.max(
+            8,
+            Math.min(
+                100-state.x,
+                state.w+dx
+            )
+        );
+
+        const newH=Math.max(
+            8,
+            Math.min(
+                100-state.y,
+                state.h+dy
+            )
+        );
+
+        gardenScalePolygon(
+            zone,
+            state.points,
+            {
+                x:state.x,
+                y:state.y,
+                w:state.w,
+                h:state.h
+            },
+            {
+                x:state.x,
+                y:state.y,
+                w:newW,
+                h:newH
+            }
+        );
     }else{
-        zone.x=Math.max(0,Math.min(100-zone.w,state.x+dx));
-        zone.y=Math.max(0,Math.min(100-zone.h,state.y+dy));
+        const requestedX=Math.max(
+            0,
+            Math.min(
+                100-state.w,
+                state.x+dx
+            )
+        );
+
+        const requestedY=Math.max(
+            0,
+            Math.min(
+                100-state.h,
+                state.y+dy
+            )
+        );
+
+        gardenTranslatePolygon(
+            zone,
+            state.points,
+            requestedX-state.x,
+            requestedY-state.y
+        );
     }
+
     renderGardenMap();
 }
 

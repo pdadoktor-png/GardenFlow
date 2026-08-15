@@ -6,6 +6,13 @@ class GardenManager
 {
 public:
     static constexpr uint8_t MAX_ZONES = 24;
+    static constexpr uint8_t MAX_POINTS = 16;
+
+    struct Point
+    {
+        float x = 0.0f;
+        float y = 0.0f;
+    };
 
     struct Zone
     {
@@ -14,11 +21,13 @@ public:
         uint8_t profileId = 0;
         uint8_t valve = 0;
         int16_t programIndex = -1;
-        String shape = "rect";
+        String shape = "polygon";
         float x = 10.0f;
         float y = 10.0f;
         float width = 24.0f;
         float height = 18.0f;
+        uint8_t pointCount = 0;
+        Point points[MAX_POINTS];
         String color = "#2d7645";
     };
 
@@ -51,4 +60,6 @@ private:
     bool parseJson(const String& json, String& message);
     static bool validColor(const String& color);
     static void normalizeZone(Zone& zone);
+    static void ensurePolygon(Zone& zone);
+    static void updateBoundsFromPoints(Zone& zone);
 };

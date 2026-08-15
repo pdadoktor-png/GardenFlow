@@ -2,6 +2,7 @@
 
 #include <ArduinoJson.h>
 #include <LittleFS.h>
+#include <new>
 
 bool GardenManager::begin()
 {
@@ -214,6 +215,18 @@ String GardenManager::exportJson() const
         zone["y"] = item.y;
         zone["width"] = item.width;
         zone["height"] = item.height;
+
+        JsonArray points =
+            zone["points"].to<JsonArray>();
+
+        for (uint8_t p = 0; p < item.pointCount; ++p)
+        {
+            JsonArray point =
+                points.add<JsonArray>();
+            point.add(item.points[p].x);
+            point.add(item.points[p].y);
+        }
+
         zone["color"] = item.color;
     }
 
@@ -230,7 +243,14 @@ bool GardenManager::importJson(const String& json, String& message)
         return false;
     }
 
-    Zone backup[MAX_ZONES];
+    Zone* backup = new (std::nothrow) Zone[MAX_ZONES];
+
+    if (backup == nullptr)
+    {
+        message = "Zu wenig Heap fuer Gartenkarten-Import";
+        return false;
+    }
+
     const uint8_t backupCount = count_;
 
     for (uint8_t i = 0; i < backupCount; ++i)
@@ -247,6 +267,7 @@ bool GardenManager::importJson(const String& json, String& message)
             zones_[i] = backup[i];
         }
 
+        delete[] backup;
         return false;
     }
 
@@ -259,10 +280,12 @@ bool GardenManager::importJson(const String& json, String& message)
             zones_[i] = backup[i];
         }
 
+        delete[] backup;
         message = "garden.json konnte nicht gespeichert werden";
         return false;
     }
 
+    delete[] backup;
     message = "Gartenkarte gespeichert";
     return true;
 }
@@ -304,7 +327,14 @@ bool GardenManager::parseJson(const String& json, String& message)
         return false;
     }
 
-    Zone parsed[MAX_ZONES];
+    Zone* parsed = new (std::nothrow) Zone[MAX_ZONES];
+
+    if (parsed == nullptr)
+    {
+        message = "Zu wenig Heap zum Parsen der Gartenkarte";
+        return false;
+    }
+
     uint8_t parsedCount = 0;
 
     for (JsonObject source : zones)
@@ -326,7 +356,7 @@ bool GardenManager::parseJson(const String& json, String& message)
         item.shape =
             String(
                 source["shape"] |
-                "rect"
+                "polygon"
             );
         item.x =
             source["x"] | 10.0f;
@@ -336,6 +366,28 @@ bool GardenManager::parseJson(const String& json, String& message)
             source["width"] | 24.0f;
         item.height =
             source["height"] | 18.0f;
+
+        JsonArray points =
+            source["points"].as<JsonArray>();
+
+        if (!points.isNull())
+        {
+            for (JsonArray point : points)
+            {
+                if (item.pointCount >= MAX_POINTS ||
+                    point.size() < 2)
+                {
+                    break;
+                }
+
+                item.points[item.pointCount].x =
+                    point[0] | 0.0f;
+                item.points[item.pointCount].y =
+                    point[1] | 0.0f;
+                ++item.pointCount;
+            }
+        }
+
         item.color =
             String(
                 source["color"] |
@@ -353,6 +405,7 @@ bool GardenManager::parseJson(const String& json, String& message)
         zones_[i] = parsed[i];
     }
 
+    delete[] parsed;
     message = "OK";
     return true;
 }
@@ -393,11 +446,6 @@ void GardenManager::normalizeZone(Zone& zone)
         zone.programIndex = -1;
     }
 
-    if (zone.shape != "rect")
-    {
-        zone.shape = "rect";
-    }
-
     zone.x =
         constrain(zone.x, 0.0f, 92.0f);
     zone.y =
@@ -415,6 +463,10 @@ void GardenManager::normalizeZone(Zone& zone)
             100.0f - zone.y
         );
 
+    ensurePolygon(zone);
+    updateBoundsFromPoints(zone);
+    zone.shape = "polygon";
+
     if (zone.name.length() == 0)
     {
         zone.name = "Zone";
@@ -429,4 +481,58 @@ void GardenManager::normalizeZone(Zone& zone)
     {
         zone.color = "#2d7645";
     }
+}
+
+
+void GardenManager::ensurePolygon(Zone& zone)
+{
+    if (zone.pointCount >= 3)
+    {
+        for (uint8_t i = 0; i < zone.pointCount; ++i)
+        {
+            zone.points[i].x = constrain(zone.points[i].x, 0.0f, 100.0f);
+            zone.points[i].y = constrain(zone.points[i].y, 0.0f, 100.0f);
+        }
+        return;
+    }
+
+    zone.pointCount = 4;
+
+    zone.points[0].x = zone.x;
+    zone.points[0].y = zone.y;
+
+    zone.points[1].x = zone.x + zone.width;
+    zone.points[1].y = zone.y;
+
+    zone.points[2].x = zone.x + zone.width;
+    zone.points[2].y = zone.y + zone.height;
+
+    zone.points[3].x = zone.x;
+    zone.points[3].y = zone.y + zone.height;
+}
+
+void GardenManager::updateBoundsFromPoints(Zone& zone)
+{
+    if (zone.pointCount < 3)
+    {
+        return;
+    }
+
+    float minX = zone.points[0].x;
+    float maxX = zone.points[0].x;
+    float minY = zone.points[0].y;
+    float maxY = zone.points[0].y;
+
+    for (uint8_t i = 1; i < zone.pointCount; ++i)
+    {
+        minX = min(minX, zone.points[i].x);
+        maxX = max(maxX, zone.points[i].x);
+        minY = min(minY, zone.points[i].y);
+        maxY = max(maxY, zone.points[i].y);
+    }
+
+    zone.x = minX;
+    zone.y = minY;
+    zone.width = max(8.0f, maxX - minX);
+    zone.height = max(8.0f, maxY - minY);
 }
