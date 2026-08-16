@@ -96,7 +96,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
 
 .gardenToolbar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-top:12px}
 .gardenCanvasWrap{margin-top:12px;border:1px solid #304237;border-radius:14px;overflow:auto;background:#0e1712}
-.gardenCanvas{position:relative;width:100%;min-width:720px;aspect-ratio:16/9;background:linear-gradient(90deg,#ffffff08 1px,transparent 1px),linear-gradient(#ffffff08 1px,transparent 1px),radial-gradient(circle at 35% 30%,#264d32 0,#18351f 38%,#102619 72%);background-size:32px 32px,32px 32px,100% 100%;overflow:hidden}
+.gardenBackgroundToolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:10px 0}.gardenMetricToolbar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:8px 0}.gardenMetricToolbar input[type=number]{width:120px;font-size:1rem}.gardenBackgroundToolbar input[type=range]{width:135px}.gardenBackgroundLayer{position:absolute;inset:0;overflow:hidden;pointer-events:none;z-index:0}.gardenBackgroundImage{position:absolute;max-width:none;max-height:none;transform-origin:0 0;user-select:none;-webkit-user-drag:none}.gardenBackgroundMoveMode{outline:2px dashed #7fc995;outline-offset:-4px}.gardenZone{z-index:2}.gardenCanvas{position:relative;width:100%;min-width:720px;aspect-ratio:16/9;background:linear-gradient(90deg,#ffffff08 1px,transparent 1px),linear-gradient(#ffffff08 1px,transparent 1px),radial-gradient(circle at 35% 30%,#264d32 0,#18351f 38%,#102619 72%);background-size:32px 32px,32px 32px,100% 100%;overflow:hidden}
 .gardenZone{position:absolute;border:2px solid #ffffff55;border-radius:14px;box-shadow:0 6px 18px #0007;cursor:move;user-select:none;touch-action:none;min-width:70px;min-height:48px;overflow:hidden}
 .gardenZone.selected{outline:3px solid #fff9;z-index:5}.gardenZone.watering{outline:3px solid #74d9ff;box-shadow:0 0 0 3px #74d9ff33,0 0 22px #45bde388;animation:gardenWaterPulse 1.4s ease-in-out infinite}.gardenZone.watering .gardenZoneHeader{background:#063d4ccc}.gardenZone.watering .gardenZoneMeta{background:#0a5366cc}.gardenWaterBadge{position:absolute;right:7px;top:7px;padding:3px 6px;border-radius:999px;background:#77ddff;color:#07313b;font-size:.68rem;font-weight:900;box-shadow:0 2px 8px #0007}@keyframes gardenWaterPulse{0%,100%{filter:brightness(1)}50%{filter:brightness(1.25)}}
 .gardenZoneHeader{padding:7px 9px;font-weight:850;background:#0005;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -283,6 +283,22 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
   </div>
   <div id="gardenStatus" class="gardenStatus"></div>
 
+  <div class="card" style="margin-top:10px;padding:12px">
+    <div class="top" style="margin-bottom:8px">
+      <div>
+        <div class="muted">Flächenberechnung</div>
+        <div class="big">Maßstab des Gartenplans</div>
+      </div>
+      <span id="gardenMetricInfo" class="badge">Noch kein Maßstab gesetzt</span>
+    </div>
+    <div class="gardenMetricToolbar">
+      <label class="field"><span>Gesamte Kartenbreite</span><input id="gardenMapWidthM" type="number" min="1" max="1000" step="0.1" placeholder="z. B. 20.0"> m</label>
+      <label class="field"><span>Gesamte Kartenhöhe</span><input id="gardenMapHeightM" type="number" min="1" max="1000" step="0.1" placeholder="z. B. 15.0"> m</label>
+      <button onclick="gardenSetMapDimensions()">Maßstab speichern</button>
+    </div>
+    <div class="setupNote" style="margin-top:8px">Beispiel: Ist der gesamte sichtbare Plan 20 m breit und 15 m hoch, hier 20 und 15 eintragen. Die Polygonflächen werden daraus automatisch in m² berechnet.</div>
+  </div>
+
   <div id="gardenInspector" class="card gardenInspector">
     <div class="top">
       <div><div class="muted">Ausgewählte Zone</div><div id="gardenInspectorTitle" class="big">--</div></div>
@@ -314,14 +330,30 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
       <div class="gardenStat"><div class="gardenStatLabel">Letzte Bewässerung</div><div id="gardenLastWatering" class="gardenStatValue">--</div></div>
       <div class="gardenStat"><div class="gardenStatLabel">Abgeschlossene Läufe</div><div id="gardenRunCount" class="gardenStatValue">0</div></div>
       <div class="gardenStat"><div class="gardenStatLabel">Aktueller Lauf</div><div id="gardenCurrentRun" class="gardenStatValue">--</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Fläche</div><div id="gardenArea" class="gardenStatValue">-- m²</div></div>
       <div class="gardenStat"><div class="gardenStatLabel">Wasser inkl. laufendem Programm</div><div id="gardenLiters" class="gardenStatValue">0,0 l</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Wasser / Fläche</div><div id="gardenLitersPerM2" class="gardenStatValue">-- l/m²</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Bewässerungsziel</div><div class="gardenStatValue"><input id="gardenTargetMm" type="number" min="0" max="50" step="0.5" value="8.0" style="width:82px" onchange="gardenSaveTargetMm()"> mm</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Benötigte Menge</div><div id="gardenRequiredLiters" class="gardenStatValue">-- l</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Durchfluss</div><div id="gardenZoneFlowRate" class="gardenStatValue">-- l/min</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Empfohlene Laufzeit</div><div id="gardenRecommendedRuntime" class="gardenStatValue">-- min</div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Programm übernehmen</div><div class="gardenStatValue"><button id="gardenApplyRuntimeButton" class="secondary" onclick="gardenApplyRecommendedRuntime()" disabled>Laufzeit übernehmen</button></div></div>
       <div class="gardenStat"><div class="gardenStatLabel">Kosten inkl. laufendem Programm</div><div id="gardenCost" class="gardenStatValue">0,00 €</div></div>
     </div>
     <div id="gardenZoneHistory" class="gardenZoneHistory setupNote">Für Historie bitte ein Programm zuordnen.</div>
   </div>
 
   <div class="gardenCanvasWrap">
-    <div id="gardenCanvas" class="gardenCanvas">
+    <div class="gardenBackgroundToolbar">
+    <input id="gardenBackgroundFile" type="file" accept="image/*" onchange="gardenLoadBackgroundFile(event)">
+    <label>Transparenz <input id="gardenBackgroundOpacity" type="range" min="10" max="100" value="45" oninput="gardenSetBackgroundOpacity(this.value)"></label>
+    <label>Größe <input id="gardenBackgroundScale" type="range" min="25" max="300" value="100" oninput="gardenSetBackgroundScale(this.value)"></label>
+    <button id="gardenBackgroundMoveButton" class="secondary" onclick="gardenToggleBackgroundMove()">Hintergrund verschieben</button>
+    <button class="secondary" onclick="gardenResetBackgroundTransform()">Bild zentrieren</button>
+    <button class="stop" onclick="gardenRemoveBackground()">Hintergrund entfernen</button>
+    <span id="gardenBackgroundInfo" class="muted">Kein Hintergrundbild</span>
+  </div>
+  <div id="gardenCanvas" class="gardenCanvas">
       <div id="gardenEmpty" class="gardenEmpty">Noch keine Gartenbereiche angelegt</div>
     </div>
   </div>
@@ -1914,6 +1946,61 @@ let gardenInteraction=null;
 let gardenPolygonEditMode=false;
 let gardenVertexInteraction=null;
 let gardenSelectedVertex=-1;
+let gardenBackground={dataUrl:'',opacity:0.45,scale:1,x:0,y:0};
+let gardenBackgroundMoveMode=false;
+let gardenBackgroundDrag=null;
+let gardenMetric={widthM:0,heightM:0};
+
+
+function gardenBackgroundStorageKey(){return 'gardenflowBackgroundV1';}
+function gardenSaveBackgroundLocal(){
+    try{localStorage.setItem(gardenBackgroundStorageKey(),JSON.stringify(gardenBackground));return true;}
+    catch(error){setGardenStatus('Hintergrund konnte nicht gespeichert werden: '+error.message,'errmsg');return false;}
+}
+function gardenLoadBackgroundLocal(){
+    try{
+        const raw=localStorage.getItem(gardenBackgroundStorageKey());
+        if(raw){
+            const v=JSON.parse(raw);
+            gardenBackground={dataUrl:String(v.dataUrl||''),opacity:Math.max(.1,Math.min(1,Number(v.opacity??.45))),scale:Math.max(.25,Math.min(3,Number(v.scale??1))),x:Number(v.x||0),y:Number(v.y||0)};
+        }
+    }catch(e){}
+    renderGardenBackground();
+}
+function renderGardenBackground(){
+    const canvas=document.getElementById('gardenCanvas');if(!canvas)return;
+    let layer=document.getElementById('gardenBackgroundLayer');
+    if(!layer){layer=document.createElement('div');layer.id='gardenBackgroundLayer';layer.className='gardenBackgroundLayer';canvas.prepend(layer);}
+    layer.innerHTML='';
+    if(gardenBackground.dataUrl){
+        const img=document.createElement('img');img.className='gardenBackgroundImage';img.src=gardenBackground.dataUrl;img.alt='Garten-Hintergrund';
+        img.style.opacity=String(gardenBackground.opacity);img.style.left=gardenBackground.x+'px';img.style.top=gardenBackground.y+'px';img.style.transform='scale('+gardenBackground.scale+')';layer.appendChild(img);
+    }
+    const op=document.getElementById('gardenBackgroundOpacity');if(op)op.value=String(Math.round(gardenBackground.opacity*100));
+    const sc=document.getElementById('gardenBackgroundScale');if(sc)sc.value=String(Math.round(gardenBackground.scale*100));
+    const info=document.getElementById('gardenBackgroundInfo');if(info)info.textContent=gardenBackground.dataUrl?'Hintergrund aktiv · '+Math.round(gardenBackground.opacity*100)+' % · '+Math.round(gardenBackground.scale*100)+' %':'Kein Hintergrundbild';
+    const btn=document.getElementById('gardenBackgroundMoveButton');if(btn)btn.textContent=gardenBackgroundMoveMode?'Verschieben beenden':'Hintergrund verschieben';
+    canvas.classList.toggle('gardenBackgroundMoveMode',gardenBackgroundMoveMode);
+}
+function gardenLoadBackgroundFile(event){
+    const file=event.target.files?.[0];if(!file)return;
+    if(file.size>1500*1024){setGardenStatus('Bild zu groß. Bitte maximal 1,5 MB verwenden.','errmsg');event.target.value='';return;}
+    const reader=new FileReader();
+    reader.onload=()=>{gardenBackground={dataUrl:String(reader.result||''),opacity:.45,scale:1,x:0,y:0};if(gardenSaveBackgroundLocal()){renderGardenBackground();setGardenStatus('Hintergrundbild im Browser gespeichert','okmsg');}};
+    reader.onerror=()=>setGardenStatus('Hintergrundbild konnte nicht gelesen werden','errmsg');reader.readAsDataURL(file);
+}
+function gardenSetBackgroundOpacity(value){gardenBackground.opacity=Math.max(.1,Math.min(1,Number(value)/100));gardenSaveBackgroundLocal();renderGardenBackground();}
+function gardenSetBackgroundScale(value){gardenBackground.scale=Math.max(.25,Math.min(3,Number(value)/100));gardenSaveBackgroundLocal();renderGardenBackground();}
+function gardenToggleBackgroundMove(){if(!gardenBackground.dataUrl){setGardenStatus('Bitte zuerst ein Hintergrundbild laden','errmsg');return;}gardenBackgroundMoveMode=!gardenBackgroundMoveMode;gardenBackgroundDrag=null;renderGardenBackground();}
+function gardenResetBackgroundTransform(){gardenBackground.x=0;gardenBackground.y=0;gardenBackground.scale=1;gardenSaveBackgroundLocal();renderGardenBackground();}
+function gardenRemoveBackground(){if(!gardenBackground.dataUrl)return;if(!confirm('Hintergrundbild wirklich entfernen?'))return;gardenBackground={dataUrl:'',opacity:.45,scale:1,x:0,y:0};gardenBackgroundMoveMode=false;gardenBackgroundDrag=null;try{localStorage.removeItem(gardenBackgroundStorageKey());}catch(e){};const f=document.getElementById('gardenBackgroundFile');if(f)f.value='';renderGardenBackground();setGardenStatus('Hintergrundbild entfernt','okmsg');}
+function gardenBackgroundPointerDown(event){
+    if(!gardenBackgroundMoveMode||!gardenBackground.dataUrl)return false;
+    gardenBackgroundDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:gardenBackground.x,y:gardenBackground.y};
+    event.currentTarget.setPointerCapture?.(event.pointerId);event.preventDefault();event.stopPropagation();return true;
+}
+function gardenBackgroundPointerMove(event){if(!gardenBackgroundDrag||event.pointerId!==gardenBackgroundDrag.pointerId)return;gardenBackground.x=gardenBackgroundDrag.x+event.clientX-gardenBackgroundDrag.startX;gardenBackground.y=gardenBackgroundDrag.y+event.clientY-gardenBackgroundDrag.startY;renderGardenBackground();event.preventDefault();}
+function gardenBackgroundPointerUp(event){if(!gardenBackgroundDrag||event.pointerId!==gardenBackgroundDrag.pointerId)return;gardenBackgroundDrag=null;gardenSaveBackgroundLocal();renderGardenBackground();event.preventDefault();}
 
 function gardenMapStorageKey(){return 'gardenflowGardenMapV1';}
 
@@ -1953,6 +2040,66 @@ async function loadGardenMap(){
     normalizeGardenZones();
     renderGardenMap();
     if(loadedFromEsp)setGardenStatus(`Gartenkarte vom ESP geladen · ${gardenZones.length} Zone(n)`,'okmsg');
+}
+
+function gardenMetricStorageKey(){return 'gardenflowMetricV1';}
+function gardenSaveMetricLocal(){
+    try{localStorage.setItem(gardenMetricStorageKey(),JSON.stringify(gardenMetric));return true;}
+    catch(error){setGardenStatus('Maßstab konnte nicht gespeichert werden: '+error.message,'errmsg');return false;}
+}
+function gardenLoadMetricLocal(){
+    try{
+        const raw=localStorage.getItem(gardenMetricStorageKey());
+        if(raw){
+            const v=JSON.parse(raw);
+            gardenMetric={
+                widthM:Math.max(0,Number(v.widthM||0)),
+                heightM:Math.max(0,Number(v.heightM||0))
+            };
+        }
+    }catch(e){}
+    gardenRenderMetricControls();
+}
+function gardenRenderMetricControls(){
+    const w=document.getElementById('gardenMapWidthM');
+    const h=document.getElementById('gardenMapHeightM');
+    const info=document.getElementById('gardenMetricInfo');
+    if(w)w.value=gardenMetric.widthM>0?String(gardenMetric.widthM):'';
+    if(h)h.value=gardenMetric.heightM>0?String(gardenMetric.heightM):'';
+    if(info){
+        info.textContent=(gardenMetric.widthM>0&&gardenMetric.heightM>0)
+            ? `Karte ${gardenMetric.widthM.toFixed(1).replace('.',',')} × ${gardenMetric.heightM.toFixed(1).replace('.',',')} m`
+            : 'Noch kein Maßstab gesetzt';
+    }
+}
+function gardenSetMapDimensions(){
+    const w=Number(document.getElementById('gardenMapWidthM')?.value||0);
+    const h=Number(document.getElementById('gardenMapHeightM')?.value||0);
+    if(!(w>0&&h>0)){
+        setGardenStatus('Bitte Kartenbreite und Kartenhöhe in Metern eingeben','errmsg');
+        return;
+    }
+    gardenMetric={widthM:w,heightM:h};
+    gardenSaveMetricLocal();
+    gardenRenderMetricControls();
+    renderGardenZoneStatistics();
+    setGardenStatus('Maßstab gespeichert','okmsg');
+}
+function gardenZoneAreaM2(zone){
+    if(!zone || !(gardenMetric.widthM>0) || !(gardenMetric.heightM>0))return 0;
+    gardenEnsurePolygon(zone);
+    if(zone.points.length<3)return 0;
+    let sum=0;
+    for(let i=0;i<zone.points.length;i++){
+        const a=zone.points[i];
+        const b=zone.points[(i+1)%zone.points.length];
+        const ax=(Number(a[0])/100)*gardenMetric.widthM;
+        const ay=(Number(a[1])/100)*gardenMetric.heightM;
+        const bx=(Number(b[0])/100)*gardenMetric.widthM;
+        const by=(Number(b[1])/100)*gardenMetric.heightM;
+        sum+=ax*by-bx*ay;
+    }
+    return Math.abs(sum)/2;
 }
 
 function gardenEnsurePolygon(zone){
@@ -2562,6 +2709,7 @@ function openSelectedGardenProgram(){
 function renderGardenMap(){
     const canvas=document.getElementById('gardenCanvas');
     if(!canvas)return;
+    renderGardenBackground();
     canvas.querySelectorAll('.gardenZone').forEach(z=>z.remove());
     const empty=document.getElementById('gardenEmpty');
     if(empty)empty.style.display=gardenZones.length?'none':'flex';
@@ -2590,7 +2738,14 @@ function renderGardenMap(){
         });
         canvas.appendChild(element);
     });
-    canvas.onclick=()=>{selectedGardenZoneId=null;gardenPolygonEditMode=false;gardenSelectedVertex=-1;renderGardenMap();renderGardenInspector();};
+    canvas.onclick=()=>{if(gardenBackgroundMoveMode)return;selectedGardenZoneId=null;gardenPolygonEditMode=false;gardenSelectedVertex=-1;renderGardenMap();renderGardenInspector();};
+    if(!canvas.dataset.backgroundHandlers){
+        canvas.dataset.backgroundHandlers='1';
+        canvas.addEventListener('pointerdown',gardenBackgroundPointerDown,true);
+        canvas.addEventListener('pointermove',gardenBackgroundPointerMove,true);
+        canvas.addEventListener('pointerup',gardenBackgroundPointerUp,true);
+        canvas.addEventListener('pointercancel',gardenBackgroundPointerUp,true);
+    }
     renderGardenInspector();
     renderGardenEdgePluses();
     renderGardenVertexHandles();
@@ -2700,6 +2855,106 @@ function gardenRunStartTimestamp(stopEntry,entries){
         : stopTime;
 }
 
+function gardenTargetMmStorageKey(zoneId){
+    return `gardenflowTargetMm_${zoneId}`;
+}
+
+function gardenGetTargetMm(zone){
+    if(!zone)return 8.0;
+    try{
+        const raw=localStorage.getItem(gardenTargetMmStorageKey(zone.id));
+        if(raw!==null){
+            const v=Number(raw);
+            if(Number.isFinite(v))return Math.max(0,Math.min(50,v));
+        }
+    }catch(e){}
+    return 8.0;
+}
+
+function gardenSaveTargetMm(){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    const input=document.getElementById('gardenTargetMm');
+    if(!zone || !input)return;
+
+    const value=Math.max(0,Math.min(50,Number(input.value)||0));
+    input.value=value.toFixed(1);
+
+    try{
+        localStorage.setItem(gardenTargetMmStorageKey(zone.id),String(value));
+    }catch(e){}
+
+    renderGardenZoneStatistics();
+}
+
+function gardenZoneFlowRate(zone){
+    if(!zone || !lastStatus)return 0;
+    const valve=Number(zone.valve||0);
+    const flow=valve===0
+        ? Number(lastStatus.waterFlow1||0)
+        : Number(lastStatus.waterFlow2||0);
+    return Number.isFinite(flow)&&flow>0?flow:0;
+}
+
+function gardenRecommendedMinutes(zone){
+    const area=gardenZoneAreaM2(zone);
+    const mm=gardenGetTargetMm(zone);
+    const liters=area*mm;
+    const flow=gardenZoneFlowRate(zone);
+    return flow>0?liters/flow:0;
+}
+
+async function gardenApplyRecommendedRuntime(){
+    const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
+    if(!zone){
+        setGardenStatus('Bitte zuerst eine Zone auswählen','errmsg');
+        return;
+    }
+
+    const program=gardenLinkedProgram(zone);
+    if(!program){
+        setGardenStatus('Dieser Zone ist kein Programm zugeordnet','errmsg');
+        return;
+    }
+
+    const recommended=gardenRecommendedMinutes(zone);
+    if(!(recommended>0)){
+        setGardenStatus('Keine gültige Laufzeit berechnet','errmsg');
+        return;
+    }
+
+    const duration=Math.max(1,Math.min(1440,Math.round(recommended)));
+
+    if(!confirm(
+        `Programm ${program.id}: Laufzeit von ${program.durationMinutes} auf ${duration} Minuten ändern?`
+    ))return;
+
+    try{
+        await api('/api/program/update',{
+            method:'POST',
+            headers:{'Content-Type':'application/x-www-form-urlencoded'},
+            body:new URLSearchParams({
+                index:program.index,
+                valve:program.valve,
+                profile:program.profileId,
+                hour:program.hour,
+                minute:program.minute,
+                duration,
+                days:program.weekdays,
+                enabled:Number(!!program.enabled)
+            })
+        });
+
+        await loadPrograms();
+        await loadStatus();
+        setGardenStatus(
+            `Programm ${program.id}: Laufzeit auf ${duration} min übernommen`,
+            'okmsg'
+        );
+    }catch(error){
+        setGardenStatus('Laufzeit konnte nicht übernommen werden: '+error.message,'errmsg');
+    }
+}
+
 function renderGardenZoneStatistics(){
     const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
     if(!zone)return;
@@ -2731,6 +2986,14 @@ function renderGardenZoneStatistics(){
     const liveCost=running
         ? Number(lastStatus.waterCurrentCost||0)
         : 0;
+
+    const totalLiters=historyLiters+liveLiters;
+    const areaM2=gardenZoneAreaM2(zone);
+    const litersPerM2=areaM2>0?totalLiters/areaM2:0;
+    const targetMm=gardenGetTargetMm(zone);
+    const requiredLiters=areaM2*targetMm;
+    const zoneFlowRate=gardenZoneFlowRate(zone);
+    const recommendedMinutes=zoneFlowRate>0?requiredLiters/zoneFlowRate:0;
 
     const setText=(id,value)=>{
         const el=document.getElementById(id);
@@ -2773,10 +3036,58 @@ function renderGardenZoneStatistics(){
     );
 
     setText(
+        'gardenArea',
+        areaM2>0
+            ? areaM2.toFixed(1).replace('.',',')+' m²'
+            : '-- m²'
+    );
+
+    const targetInput=document.getElementById('gardenTargetMm');
+    if(targetInput && document.activeElement!==targetInput){
+        targetInput.value=targetMm.toFixed(1);
+    }
+
+    setText(
+        'gardenRequiredLiters',
+        areaM2>0
+            ? requiredLiters.toFixed(1).replace('.',',')+' l'
+            : '-- l'
+    );
+
+    setText(
+        'gardenZoneFlowRate',
+        zoneFlowRate>0
+            ? zoneFlowRate.toFixed(1).replace('.',',')+' l/min'
+            : '-- l/min'
+    );
+
+    setText(
+        'gardenRecommendedRuntime',
+        recommendedMinutes>0
+            ? recommendedMinutes.toFixed(1).replace('.',',')+' min'
+            : '-- min'
+    );
+
+    const applyButton=document.getElementById('gardenApplyRuntimeButton');
+    if(applyButton){
+        applyButton.disabled=
+            !gardenLinkedProgram(zone) ||
+            !(recommendedMinutes>0);
+    }
+
+
+    setText(
         'gardenLiters',
-        (historyLiters+liveLiters)
+        totalLiters
             .toFixed(1)
             .replace('.',',')+' l'
+    );
+
+    setText(
+        'gardenLitersPerM2',
+        areaM2>0
+            ? litersPerM2.toFixed(2).replace('.',',')+' l/m²'
+            : '-- l/m²'
     );
 
     setText(
@@ -3030,7 +3341,7 @@ async function loadAll(){
     await loadStatus();
     await loadLog();
     await loadHistory();
-}bindSettingsForms();loadWeekGridStep();void loadGardenMap();restoreSelectedPage();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
+}bindSettingsForms();loadWeekGridStep();gardenLoadBackgroundLocal();gardenLoadMetricLocal();void loadGardenMap();restoreSelectedPage();loadSetup();loadAll();setInterval(loadStatus,2000);setInterval(loadPrograms,15000);setInterval(loadLog,5000);setInterval(loadHistory,10000);
 </script>
 </body></html>
 )HTML";
