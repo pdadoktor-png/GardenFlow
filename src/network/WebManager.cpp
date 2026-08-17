@@ -287,7 +287,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
     <div class="top" style="margin-bottom:8px">
       <div>
         <div class="muted">Flächenberechnung</div>
-        <div class="big">Maßstab des Gartenplans</div>
+        <div class="big">Reale Größe der Planfläche</div>
       </div>
       <span id="gardenMetricInfo" class="badge">Noch kein Maßstab gesetzt</span>
     </div>
@@ -296,7 +296,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
       <label class="field"><span>Gesamte Kartenhöhe</span><input id="gardenMapHeightM" type="number" min="1" max="1000" step="0.1" placeholder="z. B. 15.0"> m</label>
       <button onclick="gardenSetMapDimensions()">Maßstab speichern</button>
     </div>
-    <div class="setupNote" style="margin-top:8px">Beispiel: Ist der gesamte sichtbare Plan 20 m breit und 15 m hoch, hier 20 und 15 eintragen. Die Polygonflächen werden daraus automatisch in m² berechnet.</div>
+    <div class="setupNote" style="margin-top:8px">Beispiel: Planfläche 20 m × 10 m = 200 m². Die Zeichenfläche übernimmt automatisch dasselbe Seitenverhältnis 2:1. Mit „Bild an Plan anpassen“ liegt das Hintergrundbild exakt auf der Planfläche.</div>
   </div>
 
   <div id="gardenInspector" class="card gardenInspector">
@@ -348,7 +348,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
     <input id="gardenBackgroundFile" type="file" accept="image/*" onchange="gardenLoadBackgroundFile(event)">
     <label>Transparenz <input id="gardenBackgroundOpacity" type="range" min="10" max="100" value="45" oninput="gardenSetBackgroundOpacity(this.value)"></label>
     <label>Größe <input id="gardenBackgroundScale" type="range" min="25" max="300" value="100" oninput="gardenSetBackgroundScale(this.value)"></label>
-    <button id="gardenBackgroundMoveButton" class="secondary" onclick="gardenToggleBackgroundMove()">Hintergrund verschieben</button>
+    <button id="gardenBackgroundMoveButton" class="secondary" onclick="gardenToggleBackgroundMove()">Hintergrund verschieben</button><button class="secondary" onclick="gardenFitBackgroundToPlan()">Bild an Plan anpassen</button>
     <button class="secondary" onclick="gardenResetBackgroundTransform()">Bild zentrieren</button>
     <button class="stop" onclick="gardenRemoveBackground()">Hintergrund entfernen</button>
     <span id="gardenBackgroundInfo" class="muted">Kein Hintergrundbild</span>
@@ -1946,7 +1946,7 @@ let gardenInteraction=null;
 let gardenPolygonEditMode=false;
 let gardenVertexInteraction=null;
 let gardenSelectedVertex=-1;
-let gardenBackground={dataUrl:'',opacity:0.45,scale:1,x:0,y:0};
+let gardenBackground={dataUrl:'',opacity:0.45,scale:1,x:0,y:0,fitToPlan:false};
 let gardenBackgroundMoveMode=false;
 let gardenBackgroundDrag=null;
 let gardenMetric={widthM:0,heightM:0};
@@ -1962,7 +1962,7 @@ function gardenLoadBackgroundLocal(){
         const raw=localStorage.getItem(gardenBackgroundStorageKey());
         if(raw){
             const v=JSON.parse(raw);
-            gardenBackground={dataUrl:String(v.dataUrl||''),opacity:Math.max(.1,Math.min(1,Number(v.opacity??.45))),scale:Math.max(.25,Math.min(3,Number(v.scale??1))),x:Number(v.x||0),y:Number(v.y||0)};
+            gardenBackground={dataUrl:String(v.dataUrl||''),opacity:Math.max(.1,Math.min(1,Number(v.opacity??.45))),scale:Math.max(.25,Math.min(3,Number(v.scale??1))),x:Number(v.x||0),y:Number(v.y||0),fitToPlan:Boolean(v.fitToPlan)};
         }
     }catch(e){}
     renderGardenBackground();
@@ -1974,7 +1974,7 @@ function renderGardenBackground(){
     layer.innerHTML='';
     if(gardenBackground.dataUrl){
         const img=document.createElement('img');img.className='gardenBackgroundImage';img.src=gardenBackground.dataUrl;img.alt='Garten-Hintergrund';
-        img.style.opacity=String(gardenBackground.opacity);img.style.left=gardenBackground.x+'px';img.style.top=gardenBackground.y+'px';img.style.transform='scale('+gardenBackground.scale+')';layer.appendChild(img);
+        img.style.opacity=String(gardenBackground.opacity);if(gardenBackground.fitToPlan){img.style.left='0';img.style.top='0';img.style.width='100%';img.style.height='100%';img.style.transform='none';}else{img.style.left=gardenBackground.x+'px';img.style.top=gardenBackground.y+'px';img.style.width='';img.style.height='';img.style.transform='scale('+gardenBackground.scale+')';}layer.appendChild(img);
     }
     const op=document.getElementById('gardenBackgroundOpacity');if(op)op.value=String(Math.round(gardenBackground.opacity*100));
     const sc=document.getElementById('gardenBackgroundScale');if(sc)sc.value=String(Math.round(gardenBackground.scale*100));
@@ -1990,10 +1990,11 @@ function gardenLoadBackgroundFile(event){
     reader.onerror=()=>setGardenStatus('Hintergrundbild konnte nicht gelesen werden','errmsg');reader.readAsDataURL(file);
 }
 function gardenSetBackgroundOpacity(value){gardenBackground.opacity=Math.max(.1,Math.min(1,Number(value)/100));gardenSaveBackgroundLocal();renderGardenBackground();}
-function gardenSetBackgroundScale(value){gardenBackground.scale=Math.max(.25,Math.min(3,Number(value)/100));gardenSaveBackgroundLocal();renderGardenBackground();}
-function gardenToggleBackgroundMove(){if(!gardenBackground.dataUrl){setGardenStatus('Bitte zuerst ein Hintergrundbild laden','errmsg');return;}gardenBackgroundMoveMode=!gardenBackgroundMoveMode;gardenBackgroundDrag=null;renderGardenBackground();}
-function gardenResetBackgroundTransform(){gardenBackground.x=0;gardenBackground.y=0;gardenBackground.scale=1;gardenSaveBackgroundLocal();renderGardenBackground();}
-function gardenRemoveBackground(){if(!gardenBackground.dataUrl)return;if(!confirm('Hintergrundbild wirklich entfernen?'))return;gardenBackground={dataUrl:'',opacity:.45,scale:1,x:0,y:0};gardenBackgroundMoveMode=false;gardenBackgroundDrag=null;try{localStorage.removeItem(gardenBackgroundStorageKey());}catch(e){};const f=document.getElementById('gardenBackgroundFile');if(f)f.value='';renderGardenBackground();setGardenStatus('Hintergrundbild entfernt','okmsg');}
+function gardenSetBackgroundScale(value){gardenBackground.fitToPlan=false;gardenBackground.scale=Math.max(.25,Math.min(3,Number(value)/100));gardenSaveBackgroundLocal();renderGardenBackground();}
+function gardenFitBackgroundToPlan(){if(!gardenBackground.dataUrl){setGardenStatus('Bitte zuerst ein Hintergrundbild laden','errmsg');return;}gardenBackgroundMoveMode=false;gardenBackgroundDrag=null;gardenBackground.fitToPlan=true;gardenBackground.x=0;gardenBackground.y=0;gardenBackground.scale=1;gardenSaveBackgroundLocal();renderGardenBackground();renderGardenZoneStatistics();setGardenStatus('Hintergrund entspricht jetzt exakt der Planfläche','okmsg');}
+function gardenToggleBackgroundMove(){if(!gardenBackground.dataUrl){setGardenStatus('Bitte zuerst ein Hintergrundbild laden','errmsg');return;}gardenBackgroundMoveMode=!gardenBackgroundMoveMode;if(gardenBackgroundMoveMode)gardenBackground.fitToPlan=false;gardenBackgroundDrag=null;renderGardenBackground();}
+function gardenResetBackgroundTransform(){gardenBackground.x=0;gardenBackground.y=0;gardenBackground.fitToPlan=false;gardenBackground.scale=1;gardenSaveBackgroundLocal();renderGardenBackground();}
+function gardenRemoveBackground(){if(!gardenBackground.dataUrl)return;if(!confirm('Hintergrundbild wirklich entfernen?'))return;gardenBackground={dataUrl:'',opacity:.45,scale:1,x:0,y:0,fitToPlan:false};gardenBackgroundMoveMode=false;gardenBackgroundDrag=null;try{localStorage.removeItem(gardenBackgroundStorageKey());}catch(e){};const f=document.getElementById('gardenBackgroundFile');if(f)f.value='';renderGardenBackground();setGardenStatus('Hintergrundbild entfernt','okmsg');}
 function gardenBackgroundPointerDown(event){
     if(!gardenBackgroundMoveMode||!gardenBackground.dataUrl)return false;
     gardenBackgroundDrag={pointerId:event.pointerId,startX:event.clientX,startY:event.clientY,x:gardenBackground.x,y:gardenBackground.y};
@@ -2072,6 +2073,7 @@ function gardenRenderMetricControls(){
             : 'Noch kein Maßstab gesetzt';
     }
 }
+function gardenApplyPlanAspectRatio(){const canvas=document.getElementById('gardenCanvas');if(!canvas)return;if(gardenMetric.widthM>0&&gardenMetric.heightM>0)canvas.style.aspectRatio=String(gardenMetric.widthM)+' / '+String(gardenMetric.heightM);else canvas.style.aspectRatio='';}
 function gardenSetMapDimensions(){
     const w=Number(document.getElementById('gardenMapWidthM')?.value||0);
     const h=Number(document.getElementById('gardenMapHeightM')?.value||0);
@@ -2084,7 +2086,7 @@ function gardenSetMapDimensions(){
     gardenRenderMetricControls();
     renderGardenZoneStatistics();
     setGardenStatus('Maßstab gespeichert','okmsg');
-}
+gardenApplyPlanAspectRatio();}
 function gardenZoneAreaM2(zone){
     if(!zone || !(gardenMetric.widthM>0) || !(gardenMetric.heightM>0))return 0;
     gardenEnsurePolygon(zone);
