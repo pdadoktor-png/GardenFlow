@@ -337,7 +337,7 @@ button.secondary{background:#33463a;color:#edf5ef}button:disabled{opacity:.45;cu
       <div class="gardenStat"><div class="gardenStatLabel">Benötigte Menge</div><div id="gardenRequiredLiters" class="gardenStatValue">-- l</div></div>
       <div class="gardenStat"><div class="gardenStatLabel">Durchfluss</div><div id="gardenZoneFlowRate" class="gardenStatValue">-- l/min</div></div>
       <div class="gardenStat"><div class="gardenStatLabel">Empfohlene Laufzeit</div><div id="gardenRecommendedRuntime" class="gardenStatValue">-- min</div></div>
-      <div class="gardenStat"><div class="gardenStatLabel">Programm übernehmen</div><div class="gardenStatValue"><button id="gardenApplyRuntimeButton" class="secondary" onclick="gardenApplyRecommendedRuntime()" disabled>Laufzeit übernehmen</button></div></div>
+      <div class="gardenStat"><div class="gardenStatLabel">Programm übernehmen</div><div class="gardenStatValue"><button id="gardenApplyRuntimeButton" class="secondary" onclick="gardenApplyRecommendedRuntime()" disabled>In Programmeditor übernehmen</button></div></div>
       <div class="gardenStat"><div class="gardenStatLabel">Kosten inkl. laufendem Programm</div><div id="gardenCost" class="gardenStatValue">0,00 €</div></div>
     </div>
     <div id="gardenZoneHistory" class="gardenZoneHistory setupNote">Für Historie bitte ein Programm zuordnen.</div>
@@ -2905,7 +2905,7 @@ function gardenRecommendedMinutes(zone){
     return flow>0?liters/flow:0;
 }
 
-async function gardenApplyRecommendedRuntime(){
+function gardenApplyRecommendedRuntime(){
     const zone=gardenZones.find(z=>z.id===selectedGardenZoneId);
     if(!zone){
         setGardenStatus('Bitte zuerst eine Zone auswählen','errmsg');
@@ -2926,35 +2926,31 @@ async function gardenApplyRecommendedRuntime(){
 
     const duration=Math.max(1,Math.min(1440,Math.round(recommended)));
 
-    if(!confirm(
-        `Programm ${program.id}: Laufzeit von ${program.durationMinutes} auf ${duration} Minuten ändern?`
-    ))return;
+    /*
+     * Kein direkter API-Schreibzugriff aus der Gartenseite.
+     * Wir verwenden den bereits bewährten Programmeditor und dessen
+     * saveEditor()-Pfad. Dadurch sieht der Benutzer alle Programmdaten
+     * vor dem Speichern noch einmal vollständig.
+     */
+    openEditor(program);
 
-    try{
-        await api('/api/program/update',{
-            method:'POST',
-            headers:{'Content-Type':'application/x-www-form-urlencoded'},
-            body:new URLSearchParams({
-                index:program.index,
-                valve:program.valve,
-                profile:program.profileId,
-                hour:program.hour,
-                minute:program.minute,
-                duration,
-                days:program.weekdays,
-                enabled:Number(!!program.enabled)
-            })
-        });
-
-        await loadPrograms();
-        await loadStatus();
-        setGardenStatus(
-            `Programm ${program.id}: Laufzeit auf ${duration} min übernommen`,
-            'okmsg'
-        );
-    }catch(error){
-        setGardenStatus('Laufzeit konnte nicht übernommen werden: '+error.message,'errmsg');
+    const durationInput=document.getElementById('editDuration');
+    if(durationInput){
+        durationInput.value=String(duration);
+        durationInput.focus();
+        durationInput.select?.();
     }
+
+    const title=document.getElementById('editorTitle');
+    if(title){
+        title.textContent=
+            `Programm ${program.id} · Empfehlung ${duration} min`;
+    }
+
+    setGardenStatus(
+        `Empfohlene Laufzeit ${duration} min in Programmeditor übernommen · dort prüfen und speichern`,
+        'okmsg'
+    );
 }
 
 function renderGardenZoneStatistics(){
