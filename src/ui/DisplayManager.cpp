@@ -442,7 +442,7 @@ void DisplayManager::createHeader(lv_obj_t* screen)
     lv_obj_set_style_shadow_width(programsMenuButton_, 0, 0);
     lv_obj_set_style_bg_color(programsMenuButton_, Theme::panelAlt(), 0);
     lv_obj_add_event_cb(programsMenuButton_, programsMenuEvent, LV_EVENT_PRESSED, nullptr);
-    lv_obj_t* menuLabel = createLabel(programsMenuButton_, "MENUE", Theme::text());
+    lv_obj_t* menuLabel = createLabel(programsMenuButton_, "ZURUECK", Theme::text());
     lv_obj_center(menuLabel);
     lv_obj_add_flag(programsMenuButton_, LV_OBJ_FLAG_HIDDEN);
 
@@ -756,6 +756,20 @@ void DisplayManager::showPage(Page page)
     activePage_ = page;
 
     const bool programsPage = page == Page::Programs;
+
+    // Auf der Programmseite ist die Fussnavigation ausgeblendet.
+    // Deshalb darf die Liste die frei werdenden 42 Pixel mitbenutzen.
+    for (uint8_t i = 0; i < static_cast<uint8_t>(Page::Count); ++i)
+    {
+        const bool isPrograms = i == static_cast<uint8_t>(Page::Programs);
+        lv_obj_set_height(
+            pages_[i],
+            (programsPage && isPrograms)
+                ? (SCREEN_HEIGHT - HEADER_HEIGHT)
+                : CONTENT_HEIGHT
+        );
+    }
+
     setFooterVisible(!programsPage);
     if (programsMenuButton_ != nullptr)
     {

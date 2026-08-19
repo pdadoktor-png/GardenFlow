@@ -1,0 +1,10 @@
+GardenFlow Display v0.43.4h
+
+Build-Fix gegenüber v0.43.4g:
+- include/app/AppSecrets.h ergänzt.
+- Die Datei definiert exakt die von AppConfig.h erwarteten Werte:
+  AppSecrets::WIFI_SSID
+  AppSecrets::WIFI_PASSWORD
+
+Für einen Display-/Offline-Test können beide Strings leer bleiben.
+Für WLAN-Betrieb die eigenen Zugangsdaten in AppSecrets.h eintragen.
