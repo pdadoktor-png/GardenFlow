@@ -1,0 +1,10 @@
+GardenFlow Display v0.43.4g
+
+Basis: v0.43.4f
+
+Display-Aenderungen:
+- PROGRAMME nutzt bei ausgeblendeter Fussnavigation die volle Resthoehe.
+- 42 Pixel mehr vertikaler Platz fuer die Programmliste.
+- Kopf-Button auf PROGRAMME heisst jetzt ZURUECK.
+- MANUELL, STATUS und SETUP bleiben unveraendert.
+- Keine Aenderung an Ventilsteuerung, Scheduler, Touch-Treiber oder Web-UI.

@@ -1,0 +1,13 @@
+GardenFlow Display v0.43.5
+
+Basis: getestete v0.43.4h
+
+Neu auf der PROGRAMME-Seite:
+- Gartenprofil im Touch-Programmeditor auswählbar.
+- Verwendet die bereits vorhandenen GardenProfiles und Scheduler::setProfile().
+- Profilname wird in der Programmkarte angezeigt.
+- Bestehende Programmfunktionen bleiben unverändert.
+
+Betroffene Quelldateien:
+- include/ui/ProgramsPage.h
+- src/ui/ProgramsPage.cpp

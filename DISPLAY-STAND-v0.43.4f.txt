@@ -1,0 +1,20 @@
+GardenFlow Display-Stand v0.43.4f
+================================
+Basis: Commit 5db7f56 (feature/polygon-garden)
+
+Bereinigt:
+- uncommittete ESP32-WROOM/Headless-Versuche nicht übernommen
+- nur Display-Ziel ESP32-4827S043R beibehalten
+- doppeltes src/Main.cpp entfernt; src/main.cpp ist die kanonische Startdatei
+- keine alten verschachtelten Projektkopien / __MACOSX-Metadaten
+
+Aktueller Funktionsstand laut Quellcode:
+- 480x272 Display über esp32-smartdisplay / LVGL
+- XPT2046-Touch über Board-Unterstützung
+- Seiten: Manuell, Programme, Status, Setup
+- Programm-Editor mit Startzeit, Dauer, Wochentagen, Aktiv-Schalter
+- Sofortstart und Löschen aus Programmeditor
+- Runtime-Overlay mit Fortschritt / Stop
+- Helligkeit und Display-Sleep
+- Setup-Portal aus Display
+- Garten-/Polygon-Funktionen und Laufzeitübernahme bis v0.43.4f

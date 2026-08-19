@@ -1,6 +1,7 @@
 #include "ProgramsPage.h"
 #include "DisplayManager.h"
 #include "Theme.h"
+#include "profiles/GardenProfiles.h"
 
 namespace
 {
@@ -48,6 +49,23 @@ namespace
             used += static_cast<size_t>(written);
         }
         if (used == 0) snprintf(output, outputSize, "keine Tage");
+    }
+
+    void buildProfileOptions(char* output, size_t outputSize)
+    {
+        if (output == nullptr || outputSize == 0) return;
+        output[0] = '\0';
+        size_t used = 0;
+        for (uint8_t i = 0; i < GardenProfiles::PROFILE_COUNT; ++i)
+        {
+            const char* name = GardenProfiles::name(i);
+            const int written = snprintf(
+                output + used, outputSize - used,
+                i == 0 ? "%s" : "\n%s",
+                name != nullptr ? name : "Profil");
+            if (written <= 0 || static_cast<size_t>(written) >= outputSize - used) break;
+            used += static_cast<size_t>(written);
+        }
     }
 }
 
@@ -237,7 +255,8 @@ void ProgramsPage::updateProgramCard(uint8_t slotIndex)
     {
         lv_label_set_text_fmt(
             widgets_[slotIndex].details,
-            "LAEUFT  |  %u Min.  |  %s",
+            "LAEUFT | %s | %u Min. | %s",
+            GardenProfiles::name(p.profileId),
             static_cast<unsigned>(scheduler_->durationMinutes(slotIndex)),
             days);
     }
@@ -245,7 +264,8 @@ void ProgramsPage::updateProgramCard(uint8_t slotIndex)
     {
         lv_label_set_text_fmt(
             widgets_[slotIndex].details,
-            "%02u:%02u  |  %u Min.  |  %s",
+            "%s | %02u:%02u | %u Min. | %s",
+            GardenProfiles::name(p.profileId),
             static_cast<unsigned>(p.startHour),
             static_cast<unsigned>(p.startMinute),
             static_cast<unsigned>(scheduler_->durationMinutes(slotIndex)),
@@ -272,6 +292,7 @@ void ProgramsPage::openEditor(uint8_t slotIndex)
     draftHour_ = p.startHour;
     draftMinute_ = p.startMinute;
     draftDurationMinutes_ = scheduler_->durationMinutes(slotIndex);
+    draftProfileId_ = GardenProfiles::isValid(p.profileId) ? p.profileId : 0;
     draftWeekdays_ = p.weekdays;
 
     editorOverlay_ = lv_obj_create(lv_layer_top());
@@ -321,6 +342,23 @@ void ProgramsPage::openEditor(uint8_t slotIndex)
     lv_obj_t* minutes = lv_label_create(editorPanel_); lv_label_set_text(minutes, "Min.");
     lv_obj_set_style_text_color(minutes, Theme::textDim(), 0); lv_obj_set_pos(minutes, 238, 91);
 
+    lv_obj_t* profileLabel = lv_label_create(editorPanel_);
+    lv_label_set_text(profileLabel, "Profil");
+    lv_obj_set_style_text_color(profileLabel, Theme::textDim(), 0);
+    lv_obj_set_pos(profileLabel, 286, 91);
+
+    profileDropdown_ = lv_dropdown_create(editorPanel_);
+    lv_obj_set_size(profileDropdown_, 96, 38);
+    lv_obj_set_pos(profileDropdown_, 338, 80);
+    char profileOptions[192];
+    buildProfileOptions(profileOptions, sizeof(profileOptions));
+    lv_dropdown_set_options(profileDropdown_, profileOptions);
+    lv_dropdown_set_selected(profileDropdown_, draftProfileId_);
+    lv_obj_set_style_bg_color(profileDropdown_, Theme::panel(), 0);
+    lv_obj_set_style_text_color(profileDropdown_, Theme::text(), 0);
+    lv_obj_set_style_border_color(profileDropdown_, Theme::border(), 0);
+    lv_obj_set_style_border_width(profileDropdown_, 1, 0);
+
     lv_obj_t* dayLabel = lv_label_create(editorPanel_);
     lv_label_set_text(dayLabel, "Tage"); styleLabel(dayLabel); lv_obj_set_pos(dayLabel, 6, 134);
     for (uint8_t i = 0; i < WEEKDAY_COUNT; ++i)
@@ -354,6 +392,7 @@ void ProgramsPage::closeEditor()
     hourValueLabel_ = nullptr;
     minuteValueLabel_ = nullptr;
     durationValueLabel_ = nullptr;
+    profileDropdown_ = nullptr;
     for (auto& button : weekdayButtons_)
     {
         button = nullptr;
@@ -366,7 +405,13 @@ bool ProgramsPage::saveEditor()
     {
         return false;
     }
-    if (!scheduler_->setProgramEnabled(editedProgramIndex_, draftEnabled_) ||
+    if (profileDropdown_ != nullptr)
+    {
+        draftProfileId_ = static_cast<uint8_t>(lv_dropdown_get_selected(profileDropdown_));
+    }
+    if (!GardenProfiles::isValid(draftProfileId_) ||
+        !scheduler_->setProgramEnabled(editedProgramIndex_, draftEnabled_) ||
+        !scheduler_->setProfile(editedProgramIndex_, draftProfileId_) ||
         !scheduler_->setStartTime(editedProgramIndex_, draftHour_, draftMinute_) ||
         !scheduler_->setDurationMinutes(editedProgramIndex_, draftDurationMinutes_))
     {

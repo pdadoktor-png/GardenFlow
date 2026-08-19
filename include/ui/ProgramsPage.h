@@ -54,6 +54,7 @@ private:
     lv_obj_t* hourValueLabel_ = nullptr;
     lv_obj_t* minuteValueLabel_ = nullptr;
     lv_obj_t* durationValueLabel_ = nullptr;
+    lv_obj_t* profileDropdown_ = nullptr;
     lv_obj_t* weekdayButtons_[WEEKDAY_COUNT] = {};
     WeekdayButtonContext weekdayContexts_[WEEKDAY_COUNT];
 
@@ -62,6 +63,7 @@ private:
     uint8_t draftHour_ = 0;
     uint8_t draftMinute_ = 0;
     uint16_t draftDurationMinutes_ = 1;
+    uint8_t draftProfileId_ = 0;
     uint8_t draftWeekdays_ = 0;
 
     void rebuildProgramList();
