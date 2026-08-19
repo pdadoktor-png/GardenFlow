@@ -1,0 +1,10 @@
+GardenFlow v0.43.6b – UTF-8 Encoding-Fix
+
+Aenderungen:
+- LV_TXT_ENC=LV_TXT_ENC_UTF8 zusätzlich als PlatformIO Build-Flag.
+- Sichtbare Umlaute in GardenProfiles als explizite UTF-8-Bytefolgen.
+- ZURÜCK ebenfalls als explizite UTF-8-Bytefolge.
+- Korrigierter deutscher Zusatzfont aus v0.43.6a bleibt aktiv.
+- Font-Include auf #include "lvgl.h" festgelegt.
+
+Keine Änderung an Scheduler, Ventilsteuerung, Touch oder Programmlogik.

@@ -1,0 +1,11 @@
+GardenFlow v0.43.6d – Profil-Umlaut-Fix
+
+Gezielter Fix:
+- Deutscher Font auf Profil-Dropdown gesetzt.
+- Deutscher Font auch auf die separate LVGL-Dropdown-Liste gesetzt.
+- Deutscher Font auf Programm-Detailzeile gesetzt.
+
+Damit werden Profilnamen wie "Bäume" und "Gemüse" sowohl in der Auswahl
+als auch in der Programmkarte mit dem richtigen Font dargestellt.
+
+Keine Änderung an Scheduler, Ventilen, Touch oder sonstiger UI-Logik.

@@ -1,0 +1,11 @@
+GardenFlow v0.43.6a – korrigierter Umlaut-Font
+
+Ursache:
+Die sieben Zusatzglyphen wurden in v0.43.6 mit einer falschen
+Baseline-Verankerung gerendert. Dadurch waren die Bitmapdaten verschoben
+oder abgeschnitten.
+
+Fix:
+- Ä Ö Ü ä ö ü ß baseline-korrekt neu erzeugt.
+- UTF-8-Konfiguration bleibt unverändert.
+- Keine Änderung an UI-Logik, Scheduler, Ventilen oder Touch.

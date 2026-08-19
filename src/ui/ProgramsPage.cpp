@@ -1,6 +1,7 @@
 #include "ProgramsPage.h"
 #include "DisplayManager.h"
 #include "Theme.h"
+#include "ui/GardenFlowFont.h"
 #include "profiles/GardenProfiles.h"
 
 namespace
@@ -28,6 +29,7 @@ namespace
     void styleLabel(lv_obj_t* label)
     {
         lv_obj_set_style_text_color(label, Theme::text(), 0);
+        lv_obj_set_style_text_font(label, gardenFlowFont(), 0);
     }
 
     void formatWeekdays(uint8_t mask, char* output, size_t outputSize)
@@ -77,6 +79,7 @@ void ProgramsPage::begin(lv_obj_t* parent, Scheduler& scheduler, RuntimeManager&
     displayManager_ = &displayManager;
 
     listContainer_ = lv_obj_create(parent_);
+    lv_obj_set_style_text_font(listContainer_, gardenFlowFont(), 0);
     lv_obj_remove_style_all(listContainer_);
     lv_obj_set_size(listContainer_, LV_PCT(100), LV_PCT(100));
     lv_obj_set_pos(listContainer_, 0, 0);
@@ -220,6 +223,7 @@ void ProgramsPage::createProgramCard(uint8_t slotIndex, uint8_t numberInValve, i
     lv_obj_set_width(ui.details, 292);
     lv_label_set_long_mode(ui.details, LV_LABEL_LONG_CLIP);
     lv_obj_set_style_text_color(ui.details, Theme::textDim(), 0);
+    lv_obj_set_style_text_font(ui.details, gardenFlowFont(), 0);
     lv_obj_set_pos(ui.details, 0, 26);
 
     ui.enableSwitch = lv_switch_create(ui.card);
@@ -345,6 +349,7 @@ void ProgramsPage::openEditor(uint8_t slotIndex)
     lv_obj_t* profileLabel = lv_label_create(editorPanel_);
     lv_label_set_text(profileLabel, "Profil");
     lv_obj_set_style_text_color(profileLabel, Theme::textDim(), 0);
+    lv_obj_set_style_text_font(profileLabel, gardenFlowFont(), 0);
     lv_obj_set_pos(profileLabel, 286, 91);
 
     profileDropdown_ = lv_dropdown_create(editorPanel_);
@@ -356,8 +361,18 @@ void ProgramsPage::openEditor(uint8_t slotIndex)
     lv_dropdown_set_selected(profileDropdown_, draftProfileId_);
     lv_obj_set_style_bg_color(profileDropdown_, Theme::panel(), 0);
     lv_obj_set_style_text_color(profileDropdown_, Theme::text(), 0);
+    lv_obj_set_style_text_font(profileDropdown_, gardenFlowFont(), LV_PART_MAIN);
     lv_obj_set_style_border_color(profileDropdown_, Theme::border(), 0);
     lv_obj_set_style_border_width(profileDropdown_, 1, 0);
+
+    // LVGL verwendet fuer die geoeffnete Dropdown-Liste ein separates Objekt.
+    // Auch dort den deutschen Font explizit setzen.
+    lv_obj_t* profileList = lv_dropdown_get_list(profileDropdown_);
+    if (profileList != nullptr)
+    {
+        lv_obj_set_style_text_font(profileList, gardenFlowFont(), LV_PART_MAIN);
+        lv_obj_set_style_text_font(profileList, gardenFlowFont(), LV_PART_SELECTED);
+    }
 
     lv_obj_t* dayLabel = lv_label_create(editorPanel_);
     lv_label_set_text(dayLabel, "Tage"); styleLabel(dayLabel); lv_obj_set_pos(dayLabel, 6, 134);
@@ -477,6 +492,7 @@ lv_obj_t* ProgramsPage::createTextButton(lv_obj_t* parent, const char* text, int
     lv_obj_add_event_cb(button, callback, LV_EVENT_SHORT_CLICKED, userData ? userData : this);
     lv_obj_t* label = lv_label_create(button);
     lv_label_set_text(label, text);
+    lv_obj_set_style_text_font(label, gardenFlowFont(), 0);
     lv_obj_center(label);
     return button;
 }

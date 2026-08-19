@@ -1,5 +1,6 @@
 #include "DisplayManager.h"
 #include "Theme.h"
+#include "ui/GardenFlowFont.h"
 #include "settings/SettingsManager.h"
 
 DisplayManager* DisplayManager::instance_ = nullptr;
@@ -18,6 +19,7 @@ namespace
         lv_obj_t* label = lv_label_create(parent);
         lv_label_set_text(label, text);
         lv_obj_set_style_text_color(label, color, 0);
+        lv_obj_set_style_text_font(label, gardenFlowFont(), 0);
         return label;
     }
 
@@ -442,7 +444,7 @@ void DisplayManager::createHeader(lv_obj_t* screen)
     lv_obj_set_style_shadow_width(programsMenuButton_, 0, 0);
     lv_obj_set_style_bg_color(programsMenuButton_, Theme::panelAlt(), 0);
     lv_obj_add_event_cb(programsMenuButton_, programsMenuEvent, LV_EVENT_PRESSED, nullptr);
-    lv_obj_t* menuLabel = createLabel(programsMenuButton_, "ZURUECK", Theme::text());
+    lv_obj_t* menuLabel = createLabel(programsMenuButton_, "ZUR\xC3\x9C" "CK", Theme::text());
     lv_obj_center(menuLabel);
     lv_obj_add_flag(programsMenuButton_, LV_OBJ_FLAG_HIDDEN);
 

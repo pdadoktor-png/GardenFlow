@@ -1,0 +1,12 @@
+GardenFlow v0.43.6c – Font wirklich auf UI anwenden
+
+Gefundene Ursache:
+- Der SmartDisplay/LVGL-Theme setzt einen eigenen Textfont.
+- LV_FONT_DEFAULT wurde deshalb nicht zuverlässig auf bestehende UI-Objekte angewendet.
+- Der deutsche Zusatzfont war vorhanden, wurde aber nicht explizit benutzt.
+
+Fix:
+- lv_font_de_14 wird nun ausdrücklich auf GardenFlow-Labels gesetzt.
+- Programmeditor und Programmliste erben den Font ebenfalls.
+- ZURÜCK-UTF-8-Bytefolge korrigiert (Hex-Escape nicht mehr mehrdeutig).
+- Keine Änderung an Scheduler, Ventilsteuerung oder Touch.

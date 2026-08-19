@@ -116,8 +116,8 @@ namespace
 
         profiles[3] = makeProfile(
             GardenProfiles::ProfileId::Vegetables,
-            "Gemüse",
-            "Gemüse",
+            "Gem\xC3\xBCse",
+            "Gem\xC3\xBCse",
             20,
             115,
             110,
@@ -152,7 +152,7 @@ namespace
 
         profiles[6] = makeProfile(
             GardenProfiles::ProfileId::Trees,
-            "Bäume",
+            "B\xC3\xA4ume",
             "Baum",
             -10,
             80,
