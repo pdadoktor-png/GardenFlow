@@ -1,7 +1,10 @@
+#include <cstring>
 #include "DisplayManager.h"
 #include "Theme.h"
 #include "ui/GardenFlowFont.h"
 #include "settings/SettingsManager.h"
+#include "history/HistoryManager.h"
+#include <time.h>
 
 DisplayManager* DisplayManager::instance_ = nullptr;
 
@@ -40,12 +43,14 @@ void DisplayManager::begin(
     Scheduler& scheduler,
     RuntimeManager& runtimeManager,
     TimeManager& timeManager,
-    SettingsManager& settingsManager)
+    SettingsManager& settingsManager,
+    HistoryManager& historyManager)
 {
     scheduler_ = &scheduler;
     runtimeManager_ = &runtimeManager;
     timeManager_ = &timeManager;
     settingsManager_ = &settingsManager;
+    historyManager_ = &historyManager;
     instance_ = this;
     valveManager_ = &valveManager;
     valveManager_->setStateChangedCallback(valveStateChanged);
@@ -160,6 +165,16 @@ void DisplayManager::refreshValve(uint8_t index)
 
 void DisplayManager::showMessage(const char* message)
 {
+    // STATUS zeigt die laufende Bewaesserung bereits live an.
+    // Deshalb dort nur dieses eine blockierende Popup unterdruecken.
+    if (activePage_ == Page::Status &&
+        message != nullptr &&
+        (strcmp(message, "Bew\xC3\xA4sserung aktiv") == 0 ||
+         strcmp(message, "Bewaesserung aktiv") == 0))
+    {
+        return;
+    }
+
     if (toast_ == nullptr)
     {
         return;
@@ -500,15 +515,36 @@ void DisplayManager::createManualPage(lv_obj_t* parent)
 void DisplayManager::createStatusPage(lv_obj_t* parent)
 {
     lv_obj_t* panel = lv_obj_create(parent);
-    lv_obj_set_size(panel, 452, 164); lv_obj_set_pos(panel, 14, 10); configurePanel(panel);
-    lv_obj_t* heading=createLabel(panel,"Systemstatus",Theme::text()); lv_obj_set_pos(heading,2,0);
-    statusTimeLabel_=createLabel(panel,"Zeit: --",Theme::textDim()); lv_obj_set_pos(statusTimeLabel_,2,26);
-    statusUptimeLabel_=createLabel(panel,"System: BEREIT",Theme::open()); lv_obj_set_pos(statusUptimeLabel_,226,26);
-    statusValve1Label_=createLabel(panel,"Ventil 1: --",Theme::text()); lv_obj_set_pos(statusValve1Label_,2,54);
-    statusValve2Label_=createLabel(panel,"Ventil 2: --",Theme::text()); lv_obj_set_pos(statusValve2Label_,226,54);
-    statusActiveLabel_=createLabel(panel,"Aktuell: --",Theme::text()); lv_obj_set_pos(statusActiveLabel_,2,82);
-    statusNextLabel_=createLabel(panel,"Naechstes: --",Theme::textDim()); lv_obj_set_pos(statusNextLabel_,2,110);
-    statusPulseLabel_=createLabel(panel,"Impulse gesamt: 0",Theme::textDim()); lv_obj_set_pos(statusPulseLabel_,2,138);
+    lv_obj_set_size(panel, 452, 164);
+    lv_obj_set_pos(panel, 14, 10);
+    configurePanel(panel);
+
+    lv_obj_t* heading = createLabel(panel, "Systemstatus", Theme::text());
+    lv_obj_set_pos(heading, 2, 0);
+
+    statusTimeLabel_ = createLabel(panel, "Zeit: --", Theme::textDim());
+    lv_obj_set_pos(statusTimeLabel_, 2, 22);
+
+    statusUptimeLabel_ = createLabel(panel, "System: BEREIT", Theme::open());
+    lv_obj_set_pos(statusUptimeLabel_, 226, 22);
+
+    statusValve1Label_ = createLabel(panel, "Ventil 1: --", Theme::text());
+    lv_obj_set_pos(statusValve1Label_, 2, 44);
+
+    statusValve2Label_ = createLabel(panel, "Ventil 2: --", Theme::text());
+    lv_obj_set_pos(statusValve2Label_, 226, 44);
+
+    statusActiveLabel_ = createLabel(panel, "Aktuell: --", Theme::text());
+    lv_obj_set_pos(statusActiveLabel_, 2, 66);
+
+    statusNextLabel_ = createLabel(panel, "N\xC3\xA4" "chster Start: --", Theme::textDim());
+    lv_obj_set_pos(statusNextLabel_, 2, 88);
+
+    statusLastLabel_ = createLabel(panel, "Letzte Bew\xC3\xA4sserung: --", Theme::textDim());
+    lv_obj_set_pos(statusLastLabel_, 2, 110);
+
+    statusPulseLabel_ = createLabel(panel, "WLAN: --", Theme::textDim());
+    lv_obj_set_pos(statusPulseLabel_, 2, 132);
 }
 
 void DisplayManager::createSetupPage(lv_obj_t* parent)
@@ -831,30 +867,193 @@ void DisplayManager::updateClock()
 
 void DisplayManager::updateStatus()
 {
-    const uint32_t now=millis(); if(now-lastStatusUpdateMs_<1000) return; lastStatusUpdateMs_=now;
-    if(!valveManager_) return;
-    const auto&v1=valveManager_->channel(0); const auto&v2=valveManager_->channel(1);
-    if(statusValve1Label_) lv_label_set_text_fmt(statusValve1Label_,"Ventil 1: %s",v1.assumedOpen?"OFFEN":"GESCHLOSSEN");
-    if(statusValve2Label_) lv_label_set_text_fmt(statusValve2Label_,"Ventil 2: %s",v2.assumedOpen?"OFFEN":"GESCHLOSSEN");
-    if(statusPulseLabel_){
-        if(timeManager_ && timeManager_->isWifiConnected())
-            lv_label_set_text_fmt(statusPulseLabel_,"WLAN: %s  %ld dBm  IP %s",timeManager_->wifiSsid().c_str(),(long)timeManager_->wifiRssi(),timeManager_->ipAddress().c_str());
-        else
-            lv_label_set_text_fmt(statusPulseLabel_,"WLAN: NICHT VERBUNDEN | Impulse: %lu",(unsigned long)(v1.pulseCount+v2.pulseCount));
-    }
-    char tm[16]="--:--";
-    if(timeManager_) timeManager_->formatTime(tm,sizeof(tm));
-    if(statusTimeLabel_){
+    const uint32_t now = millis();
+    if (now - lastStatusUpdateMs_ < 1000) return;
+    lastStatusUpdateMs_ = now;
+
+    if (!valveManager_) return;
+
+    const auto& v1 = valveManager_->channel(0);
+    const auto& v2 = valveManager_->channel(1);
+
+    if (statusValve1Label_)
+        lv_label_set_text_fmt(
+            statusValve1Label_,
+            "Ventil 1: %s",
+            v1.assumedOpen ? "OFFEN" : "GESCHLOSSEN");
+
+    if (statusValve2Label_)
+        lv_label_set_text_fmt(
+            statusValve2Label_,
+            "Ventil 2: %s",
+            v2.assumedOpen ? "OFFEN" : "GESCHLOSSEN");
+
+    char tmText[16] = "--:--";
+    if (timeManager_) timeManager_->formatTime(tmText, sizeof(tmText));
+
+    if (statusTimeLabel_)
+    {
         const char* source = "BUILD-ZEIT";
-        if(timeManager_ && timeManager_->isValid()) source = "NTP";
-        else if(timeManager_ && timeManager_->isSynchronizing()) source = "NTP...";
-        lv_label_set_text_fmt(statusTimeLabel_,"Zeit: %s (%s)",tm,source);
+        if (timeManager_ && timeManager_->isValid()) source = "NTP";
+        else if (timeManager_ && timeManager_->isSynchronizing()) source = "NTP...";
+        lv_label_set_text_fmt(statusTimeLabel_, "Zeit: %s (%s)", tmText, source);
     }
-    if(runtimeManager_&&runtimeManager_->isRunning()){
-        if(statusUptimeLabel_) lv_label_set_text(statusUptimeLabel_,runtimeManager_->isAutomaticRun()?"System: AUTOMATIK":"System: MANUELL");
-        if(statusActiveLabel_) lv_label_set_text_fmt(statusActiveLabel_,"Aktuell: Programm %d, Ventil %u, %02lu:%02lu",runtimeManager_->runningProgramIndex()+1,runtimeManager_->runningValveIndex()+1,(unsigned long)(runtimeManager_->remainingSeconds()/60),(unsigned long)(runtimeManager_->remainingSeconds()%60));
-    } else {if(statusUptimeLabel_)lv_label_set_text(statusUptimeLabel_,"System: BEREIT");if(statusActiveLabel_)lv_label_set_text(statusActiveLabel_,"Aktuell: --");}
-    if(statusNextLabel_&&runtimeManager_&&scheduler_){int16_t n=runtimeManager_->nextProgramIndex();if(n>=0){const auto&p=scheduler_->program(n);lv_label_set_text_fmt(statusNextLabel_,"Naechstes: P%lu, Ventil %u, %02u:%02u",(unsigned long)p.id,p.valveIndex+1,p.startHour,p.startMinute);}else lv_label_set_text(statusNextLabel_,"Naechstes: --");}
+
+    if (runtimeManager_ && runtimeManager_->isRunning())
+    {
+        if (statusUptimeLabel_)
+            lv_label_set_text(
+                statusUptimeLabel_,
+                runtimeManager_->isAutomaticRun() ? "System: AUTOMATIK" : "System: MANUELL");
+
+        if (statusActiveLabel_)
+        {
+            const uint32_t remaining = runtimeManager_->remainingSeconds();
+            lv_label_set_text_fmt(
+                statusActiveLabel_,
+                "Aktuell: P%d | Ventil %u | Rest %02lu:%02lu",
+                runtimeManager_->runningProgramIndex() + 1,
+                runtimeManager_->runningValveIndex() + 1,
+                static_cast<unsigned long>(remaining / 60UL),
+                static_cast<unsigned long>(remaining % 60UL));
+        }
+    }
+    else
+    {
+        if (statusUptimeLabel_) lv_label_set_text(statusUptimeLabel_, "System: BEREIT");
+        if (statusActiveLabel_) lv_label_set_text(statusActiveLabel_, "Aktuell: keine Bew\xC3\xA4" "sserung");
+    }
+
+    if (statusNextLabel_ && runtimeManager_ && scheduler_)
+    {
+        const int16_t n = runtimeManager_->nextProgramIndex();
+
+        if (n >= 0)
+        {
+            const auto& p = scheduler_->program(static_cast<uint8_t>(n));
+
+            static const char* weekdayNames[7] =
+            {
+                "Mo", "Di", "Mi", "Do", "Fr", "Sa", "So"
+            };
+
+            const uint8_t today =
+                timeManager_ ? timeManager_->weekdayMondayZero() : 0;
+
+            uint8_t dayOffset = 0;
+            bool foundDay = false;
+
+            for (uint8_t day = 0; day < 8; ++day)
+            {
+                const uint8_t weekday = (today + day) % 7;
+                if ((p.weekdays & (1U << weekday)) == 0) continue;
+
+                if (day == 0 && timeManager_ != nullptr)
+                {
+                    const uint16_t nowMinutes =
+                        static_cast<uint16_t>(timeManager_->hour()) * 60U +
+                        static_cast<uint16_t>(timeManager_->minute());
+
+                    const uint16_t startMinutes =
+                        static_cast<uint16_t>(p.startHour) * 60U +
+                        static_cast<uint16_t>(p.startMinute);
+
+                    if (startMinutes < nowMinutes) continue;
+                }
+
+                dayOffset = day;
+                foundDay = true;
+                break;
+            }
+
+            const uint8_t weekday = (today + dayOffset) % 7;
+
+            if (foundDay)
+            {
+                lv_label_set_text_fmt(
+                    statusNextLabel_,
+                    "N\xC3\xA4" "chster Start: %s %02u:%02u | P%lu | V%u",
+                    weekdayNames[weekday],
+                    p.startHour,
+                    p.startMinute,
+                    static_cast<unsigned long>(p.id),
+                    static_cast<unsigned>(p.valveIndex + 1));
+            }
+            else
+            {
+                lv_label_set_text(statusNextLabel_, "N\xC3\xA4" "chster Start: --");
+            }
+        }
+        else
+        {
+            lv_label_set_text(statusNextLabel_, "N\xC3\xA4" "chster Start: --");
+        }
+    }
+
+    if (statusLastLabel_)
+    {
+        HistoryManager::HistoryEntry entry;
+        bool found = false;
+
+        if (historyManager_ != nullptr && historyManager_->isReady())
+        {
+            const uint16_t count = historyManager_->count();
+
+            for (uint16_t i = 0; i < count; ++i)
+            {
+                if (!historyManager_->readNewest(i, entry)) continue;
+
+                if (strcmp(entry.event, "stop") == 0)
+                {
+                    found = true;
+                    break;
+                }
+            }
+        }
+
+        if (found)
+        {
+            char when[24] = "--";
+            const time_t ts = static_cast<time_t>(entry.timestamp);
+            struct tm local = {};
+
+            if (localtime_r(&ts, &local) != nullptr)
+            {
+                strftime(when, sizeof(when), "%d.%m. %H:%M", &local);
+            }
+
+            lv_label_set_text_fmt(
+                statusLastLabel_,
+                "Letzte Bew\xC3\xA4sserung: %s | V%u | %lu min",
+                when,
+                static_cast<unsigned>(entry.valveIndex + 1),
+                static_cast<unsigned long>((entry.actualSeconds + 30UL) / 60UL));
+        }
+        else
+        {
+            lv_label_set_text(statusLastLabel_, "Letzte Bew\xC3\xA4sserung: --");
+        }
+    }
+
+    if (statusPulseLabel_)
+    {
+        if (timeManager_ && timeManager_->isWifiConnected())
+        {
+            lv_label_set_text_fmt(
+                statusPulseLabel_,
+                "WLAN: %s | %ld dBm | %s",
+                timeManager_->wifiSsid().c_str(),
+                static_cast<long>(timeManager_->wifiRssi()),
+                timeManager_->ipAddress().c_str());
+        }
+        else
+        {
+            lv_label_set_text_fmt(
+                statusPulseLabel_,
+                "WLAN: NICHT VERBUNDEN | Impulse %lu",
+                static_cast<unsigned long>(v1.pulseCount + v2.pulseCount));
+        }
+    }
 }
 
 void DisplayManager::updateRuntimeOverlay()
@@ -866,6 +1065,18 @@ void DisplayManager::updateRuntimeOverlay()
 
     const bool running = runtimeManager_->isRunning();
     const int16_t programIndex = runtimeManager_->runningProgramIndex();
+
+    // STATUS zeigt Ventil, Programm und Restzeit bereits live.
+    // Das grosse Laufzeit-Overlay soll diese Informationen dort nicht verdecken.
+    if (running && activePage_ == Page::Status)
+    {
+        if (runtimeOverlayVisible_)
+        {
+            lv_obj_add_flag(runtimeOverlay_, LV_OBJ_FLAG_HIDDEN);
+            runtimeOverlayVisible_ = false;
+        }
+        return;
+    }
 
     if (!running)
     {

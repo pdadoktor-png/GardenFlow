@@ -1,0 +1,10 @@
+GardenFlow v0.43.8b – vollständiger Status-/Popup-Fix
+
+Behebt den Buildfehler aus v0.43.8a:
+- DisplayManager.h enthält historyManager_ und statusLastLabel_
+- DisplayManager::begin() erhält HistoryManager
+- main.cpp übergibt historyManager
+- DisplayManager.cpp enthält die erweiterte STATUS-Seite
+- Im STATUS-Tab wird nur "Bewässerung aktiv" unterdrückt
+
+Dieses Paket enthält bewusst alle voneinander abhängigen Dateien.

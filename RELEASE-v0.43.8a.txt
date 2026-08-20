@@ -1,0 +1,6 @@
+GardenFlow v0.43.8a – Status-Popup-Fix
+
+- Im STATUS-Tab wird nur "Bewässerung aktiv" unterdrückt.
+- Laufstatus und Restzeit bleiben sichtbar.
+- Auf MANUELL, PROGRAMME und SETUP bleibt das Popup erhalten.
+- Andere Meldungen bleiben auch auf STATUS erhalten.

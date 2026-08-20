@@ -1,0 +1,6 @@
+GardenFlow v0.43.8d – Rechtschreibkorrektur
+
+Änderung:
+- STATUS zeigt jetzt korrekt "keine Bewässerung" statt "keine Bewaesserung".
+
+Keine Änderung an Runtime-, Scheduler-, Ventil- oder Touch-Logik.

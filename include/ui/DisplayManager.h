@@ -12,6 +12,7 @@
 #include "time/TimeManager.h"
 
 class SettingsManager;
+class HistoryManager;
 
 class DisplayManager
 {
@@ -21,7 +22,8 @@ public:
         Scheduler& scheduler,
         RuntimeManager& runtimeManager,
         TimeManager& timeManager,
-        SettingsManager& settingsManager
+        SettingsManager& settingsManager,
+        HistoryManager& historyManager
     );
     void update();
 
@@ -55,6 +57,7 @@ private:
     RuntimeManager* runtimeManager_ = nullptr;
     TimeManager* timeManager_ = nullptr;
     SettingsManager* settingsManager_ = nullptr;
+    HistoryManager* historyManager_ = nullptr;
 
     ValveWidgets widgets_[AppConfig::DISPLAYED_VALVE_COUNT];
     ProgramsPage programsPage_;
@@ -83,6 +86,7 @@ private:
     lv_obj_t* statusPulseLabel_ = nullptr;
     lv_obj_t* statusActiveLabel_ = nullptr;
     lv_obj_t* statusNextLabel_ = nullptr;
+    lv_obj_t* statusLastLabel_ = nullptr;
     lv_obj_t* statusTimeLabel_ = nullptr;
 
     lv_obj_t* brightnessValueLabel_ = nullptr;

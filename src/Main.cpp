@@ -105,7 +105,8 @@ void setup()
             scheduler,
             runtimeManager,
             timeManager,
-            settingsManager);
+            settingsManager,
+            historyManager);
 
         webManager.begin(
             scheduler,

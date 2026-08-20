@@ -1,0 +1,13 @@
+GardenFlow v0.43.8c – echter Status-Overlay-Fix
+
+Gefundene Ursachen:
+1. "Bewässerung aktiv" ist kein Toast, sondern das separate runtimeOverlay_.
+   Es wird jetzt nur bei geöffneter STATUS-Seite ausgeblendet.
+   Beim Wechsel auf MANUELL, PROGRAMME oder SETUP erscheint es während
+   einer laufenden Bewässerung wieder wie bisher.
+
+2. "Nächster Start" war als C++-Hex-Escape mehrdeutig:
+   \xA4ch... wird von C/C++ weiter als Hexfolge gelesen.
+   Die UTF-8-Sequenz wurde deshalb in zwei String-Literale getrennt.
+
+Keine Änderung an Runtime-, Scheduler- oder Ventillogik.
