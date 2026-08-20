@@ -55,6 +55,7 @@ private:
     lv_obj_t* minuteValueLabel_ = nullptr;
     lv_obj_t* durationValueLabel_ = nullptr;
     lv_obj_t* profileDropdown_ = nullptr;
+    lv_obj_t* profileRangeLabel_ = nullptr;
     lv_obj_t* weekdayButtons_[WEEKDAY_COUNT] = {};
     WeekdayButtonContext weekdayContexts_[WEEKDAY_COUNT];
 
@@ -90,6 +91,7 @@ private:
     static void minutePlusEvent(lv_event_t* event);
     static void durationMinusEvent(lv_event_t* event);
     static void durationPlusEvent(lv_event_t* event);
+    static void profileChangedEvent(lv_event_t* event);
     static void weekdayEvent(lv_event_t* event);
     static void editorEnabledEvent(lv_event_t* event);
     static void editorSaveEvent(lv_event_t* event);

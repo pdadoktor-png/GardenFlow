@@ -359,6 +359,11 @@ void ProgramsPage::openEditor(uint8_t slotIndex)
     buildProfileOptions(profileOptions, sizeof(profileOptions));
     lv_dropdown_set_options(profileDropdown_, profileOptions);
     lv_dropdown_set_selected(profileDropdown_, draftProfileId_);
+    lv_obj_add_event_cb(
+        profileDropdown_,
+        profileChangedEvent,
+        LV_EVENT_VALUE_CHANGED,
+        this);
     lv_obj_set_style_bg_color(profileDropdown_, Theme::panel(), 0);
     lv_obj_set_style_text_color(profileDropdown_, Theme::text(), 0);
     lv_obj_set_style_text_font(profileDropdown_, gardenFlowFont(), LV_PART_MAIN);
@@ -374,13 +379,20 @@ void ProgramsPage::openEditor(uint8_t slotIndex)
         lv_obj_set_style_text_font(profileList, gardenFlowFont(), LV_PART_SELECTED);
     }
 
+    profileRangeLabel_ = lv_label_create(editorPanel_);
+    lv_obj_set_width(profileRangeLabel_, 150);
+    lv_obj_set_style_text_color(profileRangeLabel_, Theme::textDim(), 0);
+    lv_obj_set_style_text_font(profileRangeLabel_, gardenFlowFont(), 0);
+    lv_obj_set_style_text_align(profileRangeLabel_, LV_TEXT_ALIGN_RIGHT, 0);
+    lv_obj_set_pos(profileRangeLabel_, 284, 118);
+
     lv_obj_t* dayLabel = lv_label_create(editorPanel_);
-    lv_label_set_text(dayLabel, "Tage"); styleLabel(dayLabel); lv_obj_set_pos(dayLabel, 6, 134);
+    lv_label_set_text(dayLabel, "Tage"); styleLabel(dayLabel); lv_obj_set_pos(dayLabel, 6, 148);
     for (uint8_t i = 0; i < WEEKDAY_COUNT; ++i)
     {
         weekdayContexts_[i].owner = this;
         weekdayContexts_[i].weekdayIndex = i;
-        weekdayButtons_[i] = createTextButton(editorPanel_, WEEKDAY_NAMES[i], 54 + i * 54, 124,
+        weekdayButtons_[i] = createTextButton(editorPanel_, WEEKDAY_NAMES[i], 54 + i * 54, 138,
                                                48, 36, weekdayEvent, &weekdayContexts_[i]);
     }
 
@@ -408,6 +420,7 @@ void ProgramsPage::closeEditor()
     minuteValueLabel_ = nullptr;
     durationValueLabel_ = nullptr;
     profileDropdown_ = nullptr;
+    profileRangeLabel_ = nullptr;
     for (auto& button : weekdayButtons_)
     {
         button = nullptr;
@@ -466,7 +479,23 @@ void ProgramsPage::refreshEditorValues()
     }
     if (hourValueLabel_) lv_label_set_text_fmt(hourValueLabel_, "%02u", static_cast<unsigned>(draftHour_));
     if (minuteValueLabel_) lv_label_set_text_fmt(minuteValueLabel_, "%02u", static_cast<unsigned>(draftMinute_));
-    if (durationValueLabel_) lv_label_set_text_fmt(durationValueLabel_, "%u", static_cast<unsigned>(draftDurationMinutes_));
+    if (durationValueLabel_)
+        lv_label_set_text_fmt(
+            durationValueLabel_,
+            "%u",
+            static_cast<unsigned>(draftDurationMinutes_));
+
+    if (profileRangeLabel_ != nullptr && GardenProfiles::isValid(draftProfileId_))
+    {
+        const auto& profile = GardenProfiles::profileByIndex(draftProfileId_);
+
+        lv_label_set_text_fmt(
+            profileRangeLabel_,
+            "%u-%u Min | %+d%%",
+            static_cast<unsigned>(profile.minimumMinutes),
+            static_cast<unsigned>(profile.maximumMinutes),
+            static_cast<int>(profile.correctionPercent));
+    }
 }
 
 void ProgramsPage::refreshWeekdayButtons()
@@ -545,6 +574,44 @@ void ProgramsPage::minuteMinusEvent(lv_event_t* e) { auto* p = static_cast<Progr
 void ProgramsPage::minutePlusEvent(lv_event_t* e) { auto* p = static_cast<ProgramsPage*>(lv_event_get_user_data(e)); if (p) { p->draftMinute_ = p->draftMinute_ >= 59 ? 0 : p->draftMinute_ + 1; p->refreshEditorValues(); } }
 void ProgramsPage::durationMinusEvent(lv_event_t* e) { auto* p = static_cast<ProgramsPage*>(lv_event_get_user_data(e)); if (p && p->draftDurationMinutes_ > Scheduler::MIN_DURATION_MINUTES) { --p->draftDurationMinutes_; p->refreshEditorValues(); } }
 void ProgramsPage::durationPlusEvent(lv_event_t* e) { auto* p = static_cast<ProgramsPage*>(lv_event_get_user_data(e)); if (p && p->draftDurationMinutes_ < Scheduler::MAX_DURATION_MINUTES) { ++p->draftDurationMinutes_; p->refreshEditorValues(); } }
+
+void ProgramsPage::profileChangedEvent(lv_event_t* event)
+{
+    auto* page = static_cast<ProgramsPage*>(lv_event_get_user_data(event));
+
+    if (page == nullptr || page->profileDropdown_ == nullptr)
+    {
+        return;
+    }
+
+    const uint8_t selected =
+        static_cast<uint8_t>(
+            lv_dropdown_get_selected(page->profileDropdown_));
+
+    if (!GardenProfiles::isValid(selected))
+    {
+        return;
+    }
+
+    page->draftProfileId_ = selected;
+
+    const auto& profile =
+        GardenProfiles::profileByIndex(selected);
+
+    // Die bestehende Dauer bleibt unangetastet, solange sie fuer das
+    // gewaehlte Profil im gueltigen Bereich liegt. Nur ausserhalb des
+    // Bereichs wird auf die naechste gueltige Grenze begrenzt.
+    if (page->draftDurationMinutes_ < profile.minimumMinutes)
+    {
+        page->draftDurationMinutes_ = profile.minimumMinutes;
+    }
+    else if (page->draftDurationMinutes_ > profile.maximumMinutes)
+    {
+        page->draftDurationMinutes_ = profile.maximumMinutes;
+    }
+
+    page->refreshEditorValues();
+}
 
 void ProgramsPage::weekdayEvent(lv_event_t* event)
 {

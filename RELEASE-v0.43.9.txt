@@ -1,0 +1,22 @@
+GardenFlow v0.43.9 – Profil und Programmdauer
+
+Änderungen im Programmeditor:
+- Profil-Dropdown reagiert sofort auf eine neue Auswahl.
+- Neben dem Profil wird der gültige Bereich angezeigt, z. B.:
+  5-45 Min | +20%
+- Die bisherige Programmdauer bleibt erhalten, wenn sie innerhalb dieses
+  Bereichs liegt.
+- Ist die Dauer kleiner als das Profilminimum, wird sie auf das Minimum gesetzt.
+- Ist sie größer als das Profilmaximum, wird sie auf das Maximum gesetzt.
+- Die Dauer kann anschließend weiterhin mit +/- manuell verändert werden.
+
+Bewusst NICHT eingebaut:
+- Keine erfundene automatische Laufzeitberechnung aus dem Profil.
+- Die vorhandene Web-Gartenberechnung nutzt Fläche × Ziel-mm / Durchfluss.
+  Kartenmaßstab und Ziel-mm liegen derzeit nur im Browser/localStorage und
+  stehen dem Display nicht zuverlässig zur Verfügung.
+
+Hinweis:
+Der im früheren v0.43.7 getestete direkte STOP-Knopf ist im vom Benutzer
+hochgeladenen v0.43.8d-Stand nicht enthalten. v0.43.9 verändert diesen
+Bereich nicht.
