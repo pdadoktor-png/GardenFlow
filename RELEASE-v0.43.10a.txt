@@ -1,0 +1,6 @@
+GardenFlow v0.43.10a – STOP ohne Popup
+
+- Erfolgreiches Stoppen zeigt kein zusätzliches Popup mehr.
+- Die Programmkarte aktualisiert sich direkt zurück auf den normalen Zustand.
+- Nur wenn das Stoppen fehlschlägt, erscheint weiterhin eine Fehlermeldung.
+- Keine Änderung an Runtime-, Scheduler- oder Ventillogik.

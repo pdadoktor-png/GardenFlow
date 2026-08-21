@@ -1,0 +1,14 @@
+GardenFlow v0.43.10c – STOP-Knopf nach Programmstart
+
+Fix:
+- Nach erfolgreichem Sofortstart wird die Programmliste vollständig neu aufgebaut.
+- Dadurch wird die laufende Programmkarte unmittelbar mit rotem STOP-Knopf erzeugt.
+- Das bisherige reine refresh() wurde an dieser Stelle ersetzt.
+- STOP selbst und RuntimeManager bleiben unverändert.
+- PROGRAMME bleibt weiterhin ohne großes Laufzeit-Overlay.
+
+Test:
+1. PROGRAMME -> Programm öffnen -> Start.
+2. Editor schließt.
+3. Rechte Taste der laufenden Karte muss sofort STOP statt > zeigen.
+4. STOP drücken: Lauf endet und Taste wird wieder >.

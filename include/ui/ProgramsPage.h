@@ -25,6 +25,7 @@ private:
         lv_obj_t* details = nullptr;
         lv_obj_t* enableSwitch = nullptr;
         lv_obj_t* editButton = nullptr;
+        lv_obj_t* editLabel = nullptr;
         uint8_t programIndex = 0;
     };
 

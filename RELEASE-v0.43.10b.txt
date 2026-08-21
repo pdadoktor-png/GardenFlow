@@ -1,0 +1,9 @@
+GardenFlow v0.43.10b – Laufzeit-Overlay auf PROGRAMME ausblenden
+
+Änderung:
+- Das große runtimeOverlay_ wird bei laufender Bewässerung jetzt auf
+  STATUS und PROGRAMME ausgeblendet.
+- Dadurch bleibt auf PROGRAMME die Programmkarte mit dem roten STOP-Knopf
+  sichtbar und bedienbar.
+- Auf MANUELL und SETUP bleibt das Overlay unverändert sichtbar.
+- Keine Änderung an Runtime-, Scheduler-, Ventil- oder STOP-Logik.

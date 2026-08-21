@@ -236,9 +236,10 @@ void ProgramsPage::createProgramCard(uint8_t slotIndex, uint8_t numberInValve, i
     lv_obj_set_pos(ui.editButton, 356, 4);
     styleButton(ui.editButton);
     lv_obj_add_event_cb(ui.editButton, programCardEvent, LV_EVENT_SHORT_CLICKED, &ui);
-    lv_obj_t* editLabel = lv_label_create(ui.editButton);
-    lv_label_set_text(editLabel, ">");
-    lv_obj_center(editLabel);
+    ui.editLabel = lv_label_create(ui.editButton);
+    lv_label_set_text(ui.editLabel, ">");
+    lv_obj_set_style_text_font(ui.editLabel, gardenFlowFont(), 0);
+    lv_obj_center(ui.editLabel);
 
     updateProgramCard(slotIndex);
 }
@@ -257,12 +258,14 @@ void ProgramsPage::updateProgramCard(uint8_t slotIndex)
 
     if (running)
     {
+        const uint32_t remaining = runtimeManager_->remainingSeconds();
+
         lv_label_set_text_fmt(
             widgets_[slotIndex].details,
-            "LAEUFT | %s | %u Min. | %s",
-            GardenProfiles::name(p.profileId),
-            static_cast<unsigned>(scheduler_->durationMinutes(slotIndex)),
-            days);
+            "L\xC3\x84" "UFT | Rest %02lu:%02lu | %s",
+            static_cast<unsigned long>(remaining / 60UL),
+            static_cast<unsigned long>(remaining % 60UL),
+            GardenProfiles::name(p.profileId));
     }
     else
     {
@@ -281,6 +284,22 @@ void ProgramsPage::updateProgramCard(uint8_t slotIndex)
         widgets_[slotIndex].card,
         running ? Theme::open() : Theme::border(),
         0);
+
+    if (widgets_[slotIndex].editButton != nullptr)
+    {
+        lv_obj_set_style_bg_color(
+            widgets_[slotIndex].editButton,
+            running ? lv_palette_darken(LV_PALETTE_RED, 3) : Theme::panel(),
+            0);
+    }
+
+    if (widgets_[slotIndex].editLabel != nullptr)
+    {
+        lv_label_set_text(
+            widgets_[slotIndex].editLabel,
+            running ? "STOP" : ">");
+        lv_obj_center(widgets_[slotIndex].editLabel);
+    }
 }
 
 void ProgramsPage::openEditor(uint8_t slotIndex)
@@ -550,7 +569,28 @@ void ProgramsPage::programSwitchEvent(lv_event_t* event)
 void ProgramsPage::programCardEvent(lv_event_t* event)
 {
     auto* ui = static_cast<ProgramWidgets*>(lv_event_get_user_data(event));
-    if (ui && ui->owner) ui->owner->openEditor(ui->programIndex);
+    if (ui == nullptr || ui->owner == nullptr)
+    {
+        return;
+    }
+
+    ProgramsPage* page = ui->owner;
+
+    if (page->runtimeManager_ != nullptr &&
+        page->runtimeManager_->isProgramRunning(ui->programIndex))
+    {
+        const bool stopped = page->runtimeManager_->stop();
+
+        if (!stopped && page->displayManager_ != nullptr)
+        {
+            page->displayManager_->showMessage("Stoppen fehlgeschlagen");
+        }
+
+        page->refresh();
+        return;
+    }
+
+    page->openEditor(ui->programIndex);
 }
 
 void ProgramsPage::addProgramEvent(lv_event_t* event)
@@ -688,6 +728,10 @@ void ProgramsPage::editorStartNowEvent(lv_event_t* event)
     if (started)
     {
         page->closeEditor();
-        page->refresh();
+
+        // Nach dem Start die Karten neu erzeugen. Dadurch wird der
+        // rechte Kartenknopf direkt mit dem aktuellen Runtime-Zustand
+        // aufgebaut und zeigt sicher STOP statt >.
+        page->rebuildProgramList();
     }
 }

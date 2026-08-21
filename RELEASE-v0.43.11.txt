@@ -1,0 +1,11 @@
+GardenFlow v0.43.11 – Live-Restzeit auf Programmkarte
+
+Neu:
+- Laufende Programmkarte zeigt die Restzeit live als MM:SS.
+- Anzeigeformat: LÄUFT | Rest 08:42 | Rasen
+- Die Programmkarte wird während eines Laufs auf der PROGRAMME-Seite
+  einmal pro Sekunde aktualisiert.
+- Der rote STOP-Knopf bleibt unverändert funktionsfähig.
+- Automatische und manuelle Programmstarts werden gleichermaßen angezeigt.
+
+Keine Änderung an Scheduler-, Runtime- oder Ventilsteuerungslogik.

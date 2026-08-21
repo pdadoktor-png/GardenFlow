@@ -1066,9 +1066,34 @@ void DisplayManager::updateRuntimeOverlay()
     const bool running = runtimeManager_->isRunning();
     const int16_t programIndex = runtimeManager_->runningProgramIndex();
 
+    // UI-Zustand der Programmkarten unabhängig vom Laufzeit-Overlay
+    // synchronisieren. Das ist besonders wichtig bei automatischem
+    // Scheduler-Start/-Stop, weil das Overlay auf PROGRAMME absichtlich
+    // ausgeblendet bleibt.
+    if (programIndex != lastRuntimeProgramIndex_)
+    {
+        lastRuntimeProgramIndex_ = programIndex;
+        programsPage_.refresh();
+    }
+
+    // Auf PROGRAMME die Restzeit der laufenden Karte einmal pro Sekunde
+    // aktualisieren.
+    static uint32_t lastProgramsRuntimeRefreshMs = 0;
+    if (running && activePage_ == Page::Programs)
+    {
+        const uint32_t nowMs = millis();
+        if (nowMs - lastProgramsRuntimeRefreshMs >= 1000UL)
+        {
+            lastProgramsRuntimeRefreshMs = nowMs;
+            programsPage_.refresh();
+        }
+    }
+
     // STATUS zeigt Ventil, Programm und Restzeit bereits live.
     // Das grosse Laufzeit-Overlay soll diese Informationen dort nicht verdecken.
-    if (running && activePage_ == Page::Status)
+    if (running &&
+        (activePage_ == Page::Status ||
+         activePage_ == Page::Programs))
     {
         if (runtimeOverlayVisible_)
         {

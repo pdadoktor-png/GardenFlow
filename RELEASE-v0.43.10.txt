@@ -1,0 +1,10 @@
+GardenFlow v0.43.10 – direkter STOP wieder integriert
+
+Auf Basis von v0.43.9:
+- Der rechte >-Knopf einer laufenden Programmkarte wird zu einem roten STOP-Knopf.
+- STOP beendet die laufende Bewässerung über den vorhandenen RuntimeManager.
+- Danach wird die Programmliste sofort aktualisiert und der Knopf wieder zu >.
+- Ist das Programm nicht aktiv, öffnet derselbe Knopf weiterhin den Editor.
+- Der Profil-/Dauer-Ausbau aus v0.43.9 bleibt unverändert.
+
+Keine neue Runtime- oder Schedulerlogik.

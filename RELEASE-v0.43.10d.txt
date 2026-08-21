@@ -1,0 +1,11 @@
+GardenFlow v0.43.10d – automatischer STOP-Status auf PROGRAMME
+
+Fix:
+- Programmkarten werden jetzt immer aktualisiert, sobald RuntimeManager von
+  keinem laufenden Programm auf eine Programmnummer wechselt oder zurück.
+- Damit erscheint STOP auch bei automatischem Scheduler-Start.
+- Nach automatischem Programmende wird STOP wieder zu >.
+- Die Aktualisierung ist unabhängig vom großen Laufzeit-Overlay.
+- Das Overlay bleibt auf PROGRAMME und STATUS weiterhin ausgeblendet.
+
+Keine Änderung an Scheduler-, Runtime- oder Ventilsteuerung.
