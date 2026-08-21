@@ -33,6 +33,10 @@ public:
     bool toggle(uint8_t index);
     bool pulse(uint8_t index);
 
+    // Rekonstruiert nur den logischen Zustand eines bistabilen Ventils.
+    // Es wird bewusst KEIN GPIO-Impuls ausgelöst.
+    bool restoreAssumedState(uint8_t index, bool open);
+
     const Channel& channel(uint8_t index) const;
     uint8_t count() const;
 

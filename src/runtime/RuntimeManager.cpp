@@ -8,6 +8,7 @@
 #include "water/WaterManager.h"
 #include "log/LogManager.h"
 #include "history/HistoryManager.h"
+#include <time.h>
 
 void RuntimeManager::begin(
     Scheduler& scheduler,
@@ -19,6 +20,9 @@ void RuntimeManager::begin(
     timeManager_ = &timeManager;
 
     clearState();
+
+    runPreferences_.begin("runtime", false);
+    loadPersistedRun();
 
     Serial.println(
         "RuntimeManager initialisiert"
@@ -53,6 +57,12 @@ void RuntimeManager::setHistoryManager(
 
 void RuntimeManager::update()
 {
+    if (recoveryPending_)
+    {
+        processRecovery();
+        return;
+    }
+
     checkAutomaticStart();
 
     if (!isRunning())
@@ -111,6 +121,7 @@ void RuntimeManager::update()
             valveIndex_ + 1
         );
 
+        clearPersistedRun();
         clearState();
     }
 }
@@ -301,6 +312,13 @@ bool RuntimeManager::startProgram(
         program.valveIndex;
     automaticRun_ = automatic;
 
+    savePersistedRun(
+        program.id,
+        program.valveIndex,
+        durationSeconds_,
+        automatic
+    );
+
     if (historyManager_ != nullptr)
     {
         historyManager_->recordStart(
@@ -383,8 +401,218 @@ bool RuntimeManager::stop()
         valveIndex_ + 1
     );
 
+    clearPersistedRun();
     clearState();
     return true;
+}
+
+void RuntimeManager::loadPersistedRun()
+{
+    recoveryPending_ = false;
+    persistedRun_ = PersistedRun();
+
+    if (runPreferences_.getBytesLength("active") != sizeof(PersistedRun))
+    {
+        return;
+    }
+
+    PersistedRun stored;
+    const size_t read = runPreferences_.getBytes(
+        "active",
+        &stored,
+        sizeof(stored)
+    );
+
+    if (read != sizeof(stored) ||
+        stored.magic != RUN_MAGIC ||
+        stored.programId == 0 ||
+        stored.durationSeconds == 0 ||
+        stored.valveIndex >= Scheduler::VALVE_COUNT)
+    {
+        clearPersistedRun();
+        return;
+    }
+
+    persistedRun_ = stored;
+    recoveryPending_ = true;
+
+    Serial.printf(
+        "Unterbrochenen Programmlauf gefunden: Programm %lu, Ventil %u\n",
+        static_cast<unsigned long>(stored.programId),
+        static_cast<unsigned>(stored.valveIndex + 1)
+    );
+}
+
+void RuntimeManager::savePersistedRun(
+    uint32_t programId,
+    uint8_t valveIndex,
+    uint32_t durationSeconds,
+    bool automatic)
+{
+    PersistedRun stored;
+    stored.magic = RUN_MAGIC;
+    stored.programId = programId;
+    stored.durationSeconds = durationSeconds;
+    stored.valveIndex = valveIndex;
+    stored.automatic = automatic ? 1 : 0;
+
+    // Exakte Restzeit kann nach Neustart nur mit einer beim Start bereits
+    // gueltigen NTP-Zeit berechnet werden.
+    if (timeManager_ != nullptr && timeManager_->isValid())
+    {
+        stored.startEpoch = static_cast<int64_t>(time(nullptr));
+    }
+
+    persistedRun_ = stored;
+    runPreferences_.putBytes(
+        "active",
+        &persistedRun_,
+        sizeof(persistedRun_)
+    );
+}
+
+void RuntimeManager::clearPersistedRun()
+{
+    recoveryPending_ = false;
+    persistedRun_ = PersistedRun();
+    runPreferences_.remove("active");
+}
+
+void RuntimeManager::processRecovery()
+{
+    if (!recoveryPending_ ||
+        scheduler_ == nullptr ||
+        valveManager_ == nullptr ||
+        timeManager_ == nullptr)
+    {
+        return;
+    }
+
+    // Nicht mit Build-/Fallbackzeit entscheiden. Erst echte NTP-Zeit.
+    if (!timeManager_->isValid())
+    {
+        return;
+    }
+
+    const int16_t programIndex =
+        scheduler_->findProgramIndexById(persistedRun_.programId);
+
+    const int64_t now = static_cast<int64_t>(time(nullptr));
+
+    // Wenn die Startzeit nicht belastbar gespeichert werden konnte oder das
+    // Programm inzwischen geloescht wurde, wird aus Sicherheitsgruenden nicht
+    // fortgesetzt. Der persistierte Lauf bedeutet aber, dass vor dem Ausfall
+    // ein Oeffnungsimpuls gestartet wurde: Zustand logisch als OFFEN setzen
+    // und genau einen Schliessimpuls senden.
+    if (programIndex < 0 ||
+        persistedRun_.startEpoch <= 0 ||
+        now <= 0 ||
+        now < persistedRun_.startEpoch)
+    {
+        if (!valveManager_->restoreAssumedState(
+                persistedRun_.valveIndex,
+                true) ||
+            !valveManager_->pulse(persistedRun_.valveIndex))
+        {
+            return;
+        }
+
+        Log.warning(
+            LogManager::Category::Program,
+            "Unterbrochener Lauf ohne sichere Zeitbasis: nicht fortgesetzt, Ventil wird geschlossen"
+        );
+
+        clearPersistedRun();
+        return;
+    }
+
+    const uint64_t elapsed64 =
+        static_cast<uint64_t>(now - persistedRun_.startEpoch);
+
+    const uint32_t elapsed =
+        elapsed64 > 0xFFFFFFFFULL
+            ? 0xFFFFFFFFUL
+            : static_cast<uint32_t>(elapsed64);
+
+    const auto& program = scheduler_->program(
+        static_cast<uint8_t>(programIndex)
+    );
+
+    if (elapsed >= persistedRun_.durationSeconds)
+    {
+        // Das Ventil blieb bei Stromausfall mechanisch in seiner Stellung.
+        // Deshalb erst den logischen Zustand als OFFEN rekonstruieren und dann
+        // genau EINEN Impuls zum Schliessen ausloesen.
+        if (!valveManager_->restoreAssumedState(
+                persistedRun_.valveIndex,
+                true) ||
+            !valveManager_->pulse(persistedRun_.valveIndex))
+        {
+            return;
+        }
+
+        if (historyManager_ != nullptr)
+        {
+            historyManager_->recordStop(
+                program.id,
+                program.valveIndex,
+                program.profileId,
+                persistedRun_.durationSeconds,
+                elapsed,
+                persistedRun_.automatic != 0,
+                true
+            );
+        }
+
+        if (waterManager_ != nullptr)
+        {
+            waterManager_->addRuntime(
+                persistedRun_.valveIndex,
+                elapsed
+            );
+        }
+
+        Log.addf(
+            LogManager::Category::Program,
+            LogManager::Level::Warning,
+            "Unterbrochener Lauf war bereits abgelaufen; Ventil %u wird nach %lu Sekunden geschlossen",
+            static_cast<unsigned>(persistedRun_.valveIndex + 1),
+            static_cast<unsigned long>(elapsed)
+        );
+
+        clearPersistedRun();
+        return;
+    }
+
+    // Der Lauf waere noch aktiv. Das Latching-Ventil bleibt mechanisch offen,
+    // daher KEIN neuer GPIO-Impuls. Nur den Softwarezustand rekonstruieren.
+    if (!valveManager_->restoreAssumedState(
+            persistedRun_.valveIndex,
+            true))
+    {
+        return;
+    }
+
+    runningProgramIndex_ = programIndex;
+    durationSeconds_ = persistedRun_.durationSeconds;
+    valveIndex_ = persistedRun_.valveIndex;
+    automaticRun_ = persistedRun_.automatic != 0;
+
+    // millis() startet nach dem Reboot bei null. Durch das Zuruecksetzen des
+    // virtuellen Startpunkts zaehlen die bereits vergangenen Sekunden mit.
+    // Die maximale Programmdauer ist weit kleiner als der millis()-Ueberlauf.
+    startedAtMs_ = millis() - (elapsed * 1000UL);
+
+    recoveryPending_ = false;
+
+    Log.addf(
+        LogManager::Category::Program,
+        LogManager::Level::Warning,
+        "Programmlauf nach Stromausfall fortgesetzt: Programm %lu, Rest %lu Sekunden",
+        static_cast<unsigned long>(program.id),
+        static_cast<unsigned long>(
+            persistedRun_.durationSeconds - elapsed)
+    );
 }
 
 bool RuntimeManager::isRunning() const

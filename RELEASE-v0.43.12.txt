@@ -1,0 +1,33 @@
+GardenFlow v0.43.12 – Wiederaufnahme nach Stromausfall
+
+Neu:
+- Laufender Programmlauf wird bei Start einmal persistent in ESP32 Preferences gespeichert.
+- Bei normalem Ende oder manuellem STOP wird der Datensatz wieder gelöscht.
+- Nach Neustart wartet GardenFlow auf eine echte NTP-Synchronisierung.
+- Ist der geplante Lauf noch aktiv, wird die Restzeit fortgesetzt.
+- Beim Fortsetzen wird KEIN neuer Ventilimpuls erzeugt.
+- ValveManager kann den logischen Zustand eines bistabilen Ventils ohne GPIO-Impuls auf OFFEN rekonstruieren.
+- Die ursprüngliche Programmdauer bleibt erhalten; Restzeit, History und Wasserverbrauch berücksichtigen auch die Zeit während des Stromausfalls.
+- Ist die geplante Endzeit bereits überschritten, wird der Zustand als OFFEN rekonstruiert und genau ein Impuls zum Schließen gesendet.
+- War beim ursprünglichen Start keine echte NTP-Zeit verfügbar, wird nicht fortgesetzt; GardenFlow rekonstruiert OFFEN und sendet einen Schließimpuls.
+- Display und Touch wurden nicht verändert.
+
+Flash-Schonung:
+- Es wird nicht jede Sekunde geschrieben, sondern nur bei Start sowie beim Löschen des Laufzustands nach Ende/STOP.
+
+Wichtige Hardwaregrenze:
+- Ein Stromausfall exakt während des kurzen Latching-Impulses ist bei einer reinen Toggle-Ansteuerung physikalisch nicht eindeutig rekonstruierbar. Die Software speichert den Lauf deshalb bereits beim Start, kann die tatsächliche Ventilstellung in diesem sehr kurzen Sonderfall aber nicht messen.
+
+Test 1 – Fortsetzen:
+1. WLAN/NTP synchronisieren lassen.
+2. 10-Minuten-Programm starten.
+3. Nach 2–3 Minuten Versorgung ausschalten.
+4. Nach ca. 1 Minute wieder einschalten.
+5. Nach NTP-Sync muss GardenFlow mit der rechnerischen Restzeit weiterlaufen – ohne neuen OPEN-Impuls.
+6. Am regulären Ende muss genau ein Schließimpuls erfolgen.
+
+Test 2 – Endzeit überschritten:
+1. Kurzes Programm starten und Strom ausschalten.
+2. Erst nach der ursprünglich geplanten Endzeit wieder einschalten.
+3. Nach NTP-Sync darf das Programm nicht neu starten.
+4. GardenFlow muss genau einen Schließimpuls auslösen und den Lauf als abgebrochen protokollieren.

@@ -115,6 +115,36 @@ bool ValveManager::pulse(uint8_t index)
     return true;
 }
 
+bool ValveManager::restoreAssumedState(
+    uint8_t index,
+    bool open)
+{
+    if (!validIndex(index))
+    {
+        return false;
+    }
+
+    Channel& channel = channels_[index];
+
+    if (channel.pulseActive)
+    {
+        return false;
+    }
+
+    channel.assumedOpen = open;
+    notify(index);
+
+    Log.addf(
+        LogManager::Category::Valve,
+        LogManager::Level::Warning,
+        "%s: logischer Zustand nach Neustart rekonstruiert = %s (kein Impuls)",
+        channel.name,
+        open ? "OFFEN" : "GESCHLOSSEN"
+    );
+
+    return true;
+}
+
 const ValveManager::Channel&
 ValveManager::channel(uint8_t index) const
 {
