@@ -1,8 +1,8 @@
 #include <Arduino.h>
-#include <lv_conf.h>
-#include <esp32_smartdisplay.h>
+#include <WiFi.h>
+#include <ArduinoOTA.h>
 
-#include "DisplayManager.h"
+#include "hardware/HeadlessInputManager.h"
 #include "ValveManager.h"
 #include "Scheduler.h"
 #include "runtime/RuntimeManager.h"
@@ -23,7 +23,18 @@
 #include "garden/GardenManager.h"
 
 static ValveManager valveManager;
-static DisplayManager displayManager;
+static HeadlessInputManager headlessInputManager;
+static bool otaReady = false;
+static void serviceOta() {
+    if (WiFi.status() != WL_CONNECTED) { otaReady = false; return; }
+    if (!otaReady) {
+        ArduinoOTA.setHostname("gardenflow-outdoor");
+        ArduinoOTA.begin();
+        otaReady = true;
+        Serial.print("OTA bereit: "); Serial.println(WiFi.localIP());
+    }
+    ArduinoOTA.handle();
+}
 static Scheduler scheduler;
 static RuntimeManager runtimeManager;
 static TimeManager timeManager;
@@ -47,8 +58,8 @@ void setup()
 
     Serial.println();
     Serial.println("================================");
-    Serial.println("GardenFlow Professional");
-    Serial.println("ESP32-4827S043R");
+    Serial.println("GardenFlow Outdoor");
+    Serial.println("ESP32-WROOM-32");
     Serial.println("================================");
 
     settingsManager.begin();
@@ -100,13 +111,7 @@ void setup()
         runtimeManager.setWaterManager(waterManager);
         runtimeManager.setHistoryManager(historyManager);
 
-        displayManager.begin(
-            valveManager,
-            scheduler,
-            runtimeManager,
-            timeManager,
-            settingsManager,
-            historyManager);
+        headlessInputManager.begin(valveManager, runtimeManager);
 
         webManager.begin(
             scheduler,
@@ -138,6 +143,7 @@ void loop()
     if (setupPortal.isActive())
     {
         setupPortal.update();
+        serviceOta();
         delay(5);
         return;
     }
@@ -148,7 +154,8 @@ void loop()
     advisorEngine.update();
     waterManager.update();
     runtimeManager.update();
-    displayManager.update();
+    headlessInputManager.update();
+    serviceOta();
     webManager.update();
 
     delay(5);
