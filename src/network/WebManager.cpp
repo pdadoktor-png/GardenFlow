@@ -1007,7 +1007,7 @@ function updateDashboard(s){
             : (s.weatherError||'Wetterdaten fehlen');
 
     document.getElementById('dashValves').innerHTML=
-        s.valves.map(v=>`<div class="dashboardValve"><span>${esc(v.name)}</span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET':(v.open?'OFFEN':'ZU')}</span></div>`).join('');
+        s.valves.map(v=>`<div class="dashboardValve"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET':(v.open?'OFFEN':'ZU')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">${v.pulseActive?'Schaltet…':(v.open?'Schließen':'Öffnen')}</button></span></div>`).join('');
 }
 function updateWater(s){
     const liters=value=>Number(value||0).toFixed(1).replace('.',',')+' l';
