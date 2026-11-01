@@ -1,6 +1,7 @@
 #pragma once
 
 #include <Arduino.h>
+#include <Preferences.h>
 
 #include "app/AppConfig.h"
 #include "hardware/HardwareProfile.h"
@@ -15,6 +16,7 @@ public:
         bool activeHigh = true;
 
         bool assumedOpen = false;
+        bool stateKnown = false;
         bool pulseActive = false;
 
         uint32_t pulseStartedMs = 0;
@@ -55,6 +57,9 @@ private:
 
     StateChangedCallback
         stateChangedCallback_ = nullptr;
+    Preferences stateStore_;
+    bool stateStoreReady_ = false;
+    void saveState(uint8_t index, bool pending);
 
     void setOutput(
         const Channel& channel,
