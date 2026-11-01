@@ -1007,7 +1007,7 @@ function updateDashboard(s){
             : (s.weatherError||'Wetterdaten fehlen');
 
     document.getElementById('dashValves').innerHTML=
-        s.valves.map(v=>`<div class="dashboardValve"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET':(v.open?'OFFEN':'ZU')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">${v.pulseActive?'Schaltet…':(v.open?'Schließen':'Öffnen')}</button></span></div>`).join('');
+        s.valves.map(v=>`<div class="dashboardValve"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(!v.stateKnown?'warn':(v.open?'ok':'off'))}">${v.pulseActive?'SCHALTET':(!v.stateKnown?'UNBEKANNT':(v.open?'OFFEN':'ZU'))}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">${v.pulseActive?'Schaltet…':(!v.stateKnown?'Umschalten':(v.open?'Schließen':'Öffnen'))}</button></span></div>`).join('');
 }
 function updateWater(s){
     const liters=value=>Number(value||0).toFixed(1).replace('.',',')+' l';
@@ -1111,7 +1111,7 @@ if(menuState){
         ? `● Online · ${s.rssi} dBm`
         : '● WLAN getrennt';
 }
-updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);updateGardenLiveState();renderGardenZoneStatistics();if(document.querySelector('[data-page="weekplan"].pageActive'))renderWeeklyCalendar();if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(v.open?'ok':'off')}">${v.pulseActive?'SCHALTET…':(v.open?'OFFEN':'GESCHLOSSEN')}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
+updateDashboard(s);updateSystemHealth(s);updateAdvisor(s);updateWater(s);updateGardenLiveState();renderGardenZoneStatistics();if(document.querySelector('[data-page="weekplan"].pageActive'))renderWeeklyCalendar();if(!weatherDirty)fillWeatherForm(s);if(!smartDirty)fillSmartForm(s);renderNextProgram();renderUpcomingPrograms();renderAllPrograms(s.running);fillSimulatorSelectors();badge('vacationState',s.vacationActive?'AKTIV':(s.vacationEnabled?'geplant':'aus'),s.vacationActive?'warn':(s.vacationEnabled?'ok':'off'));document.getElementById('running').textContent=s.running?('Programm '+s.programId+' · Ventil '+(s.valve+1)):'Kein Programm';document.getElementById('remaining').textContent=s.running?(s.remaining+' Sekunden verbleibend'):'Bereit';document.getElementById('stop').disabled=!s.running;document.getElementById('valves').innerHTML=s.valves.map(v=>`<div class="row"><span>${esc(v.name)}</span><span><span class="badge ${v.pulseActive?'warn':(!v.stateKnown?'warn':(v.open?'ok':'off'))}">${v.pulseActive?'SCHALTET…':(!v.stateKnown?'UNBEKANNT':(v.open?'OFFEN':'GESCHLOSSEN'))}</span> <button class="secondary" ${(s.running||v.pulseActive)?'disabled':''} onclick="toggleValve(${v.index},this)">Umschalten</button></span></div>`).join('')}catch(e){document.getElementById('address').innerHTML='<span class="error">Verbindung unterbrochen</span>'}}
 let programCache=[];
 
 function parseControllerNow(){
@@ -3861,6 +3861,8 @@ void WebManager::handleStatus()
         body += jsonEscape(String(valve.name));
         body += F("\",\"open\":");
         body += valve.assumedOpen ? F("true") : F("false");
+        body += F(",\\\"stateKnown\\\":");
+        body += valve.stateKnown ? F("true") : F("false");
         body += F(",\"pulseActive\":");
         body += valve.pulseActive ? F("true") : F("false");
         body += '}';
