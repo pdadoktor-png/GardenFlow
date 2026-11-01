@@ -12,6 +12,8 @@ void ValveManager::begin()
         "Ventil 2"
     };
 
+    stateStoreReady_ = stateStore_.begin("valve-state", false);
+
     for (uint8_t i = 0;
          i < HardwareProfile::VALVE_COUNT;
          ++i)
@@ -25,6 +27,21 @@ void ValveManager::begin()
         channel.activeHigh =
             config.activeHigh;
         channel.assumedOpen = false;
+        channel.stateKnown = false;
+        if (stateStoreReady_)
+        {
+            char key[12];
+            snprintf(key, sizeof(key), "state%u", i);
+            const uint8_t saved = stateStore_.getUChar(key, 0xFF);
+            channel.stateKnown = (saved <= 1);
+            channel.assumedOpen = (saved == 1);
+            snprintf(key, sizeof(key), "pending%u", i);
+            if (stateStore_.getBool(key, false))
+            {
+                channel.stateKnown = false;
+                Serial.printf("WARNUNG: %s - Stromausfall waehrend Schaltimpuls moeglich, Stellung unbekannt!\n", channel.name);
+            }
+        }
         channel.pulseActive = false;
         channel.pulseDurationMs =
             config.pulseDurationMs;
@@ -97,6 +114,8 @@ bool ValveManager::pulse(uint8_t index)
         return false;
     }
 
+    // Vor dem Ausgangsimpuls persistent markieren: Unterbrechung => unbekannt.
+    saveState(index, true);
     channel.lastCommandMs = now;
     channel.pulseStartedMs = now;
     channel.pulseActive = true;
@@ -132,6 +151,8 @@ bool ValveManager::restoreAssumedState(
     }
 
     channel.assumedOpen = open;
+    channel.stateKnown = true;
+    saveState(index, false);
     notify(index);
 
     Log.addf(
@@ -214,6 +235,8 @@ void ValveManager::finishPulse(
     channel.pulseActive = false;
     channel.assumedOpen =
         !channel.assumedOpen;
+    // Ein unklarer Ausgangszustand bleibt auch nach einem Toggle unklar.
+    saveState(index, false);
 
     notify(index);
 
@@ -240,5 +263,23 @@ void ValveManager::notify(uint8_t index)
     if (stateChangedCallback_ != nullptr)
     {
         stateChangedCallback_(index);
+    }
+}
+
+void ValveManager::saveState(uint8_t index, bool pending)
+{
+    if (!stateStoreReady_ || !validIndex(index)) return;
+    char key[12];
+    if (pending)
+    {
+        snprintf(key, sizeof(key), "pending%u", index);
+        stateStore_.putBool(key, true);
+    }
+    else
+    {
+        snprintf(key, sizeof(key), "state%u", index);
+        stateStore_.putUChar(key, channels_[index].stateKnown ? (channels_[index].assumedOpen ? 1 : 0) : 0xFF);
+        snprintf(key, sizeof(key), "pending%u", index);
+        stateStore_.putBool(key, false);
     }
 }
